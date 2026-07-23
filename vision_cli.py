@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from dataclasses import asdict
 import json
 import sys
 
@@ -10,6 +9,7 @@ import cv2
 
 from app.config import settings
 from app.detector import YoloDetector, draw_detections, load_image
+from app.vision import run_yolo_detection
 
 
 def main() -> None:
@@ -53,12 +53,15 @@ def main() -> None:
         "--output",
         nargs="?",
         const="",
-        help="Write an annotated image with detection boxes under images/output",
+        default="",
+        help="Write an annotated image with detection boxes. Defaults to images/output/<image>_annotated.<ext>",
     )
+    parser.add_argument("--no-output", action="store_true", help="Do not write an annotated image")
     parser.add_argument("--tolerance", type=float, default=0.08, help="Centering tolerance as frame ratio")
     args = parser.parse_args()
 
     try:
+        image = None if args.classes else load_image(args.image)
         detector = YoloDetector(
             model_path=args.model,
             confidence=args.confidence,
@@ -68,30 +71,21 @@ def main() -> None:
         if args.classes:
             print(json.dumps(detector.class_names, ensure_ascii=False, indent=2))
             return
-        image = load_image(args.image)
     except (RuntimeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
 
-    detections_for_output = None
+    vision_result = run_yolo_detection(
+        detector=detector,
+        image=image,
+        targets=args.target,
+        tolerance_ratio=args.tolerance,
+        diagnostic_confidence=args.diagnostic_confidence,
+    )
+    result = vision_result.results
+    detections_for_output = vision_result.detections_for_output
 
-    if args.target:
-        aim_results = [
-            detector.aim_at(
-                image,
-                target=target,
-                tolerance_ratio=args.tolerance,
-                diagnostic_confidence=args.diagnostic_confidence,
-            )
-            for target in args.target
-        ]
-        result = [asdict(aim_result) for aim_result in aim_results]
-        detections_for_output = [aim_result.detection for aim_result in aim_results if aim_result.detection]
-    else:
-        detections_for_output = detector.detect(image)
-        result = [asdict(detection) for detection in detections_for_output]
-
-    if args.output is not None:
+    if not args.no_output:
         output_path = _resolve_output_path(args.image, args.output, output_dir)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         annotated = draw_detections(image, detections_for_output)
@@ -103,12 +97,21 @@ def main() -> None:
 
 
 def _resolve_output_path(image_path: str, output_name: str, output_dir: Path) -> Path:
-    if output_name:
-        return output_dir / Path(output_name).name
-
     image = Path(image_path)
     suffix = image.suffix or ".jpg"
-    return output_dir / f"{image.stem}_annotated{suffix}"
+    default_name = f"{image.stem}_annotated{suffix}"
+
+    if not output_name:
+        return output_dir / default_name
+
+    output_path = Path(output_name)
+    if output_name.endswith(("/", "\\")) or output_path.is_dir():
+        return output_path / default_name
+
+    if output_path.suffix:
+        return output_dir / output_path.name
+
+    return output_dir / f"{output_path.name}{suffix}"
 
 
 if __name__ == "__main__":

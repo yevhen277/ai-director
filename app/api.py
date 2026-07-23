@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import os
 import tempfile
-from dataclasses import asdict
 from pathlib import Path
+from typing import Literal
 
 import cv2
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app.camera import capture_opencv_frame, capture_orbbec_color_frame, list_orbbec_devices
 from app.config import settings
 from app.detector import YoloDetector, load_image
 from app.face_recognition import (
@@ -20,6 +21,7 @@ from app.face_recognition import (
     registered_to_dict,
 )
 from app.labels import resolve_target_classes
+from app.vision import run_yolo_detection
 
 
 OUTPUT_DIR = Path("images") / "output"
@@ -38,8 +40,24 @@ face_service = FaceRecognitionService(
 
 
 class CameraAimRequest(BaseModel):
+    camera_source: Literal["orbbec", "opencv"] = "orbbec"
     camera_index: int = 0
     target: str
+    width: int = 1280
+    height: int = 720
+    fps: int = 30
+    warmup: int = 5
+    tolerance_ratio: float = 0.08
+
+
+class CameraDetectRequest(BaseModel):
+    camera_source: Literal["orbbec", "opencv"] = "orbbec"
+    camera_index: int = 0
+    target: str | None = None
+    width: int = 1280
+    height: int = 720
+    fps: int = 30
+    warmup: int = 5
     tolerance_ratio: float = 0.08
 
 
@@ -55,10 +73,18 @@ def health() -> dict[str, str]:
     return {"status": "ok", "model": settings.yolo_model, "face_model": settings.face_model}
 
 
+@app.get("/camera/orbbec/devices")
+def orbbec_devices() -> dict:
+    try:
+        return {"devices": list_orbbec_devices()}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @app.post("/detect/image")
 async def detect_image(file: UploadFile = File(...)) -> list[dict]:
     image = await _read_upload(file)
-    return [asdict(detection) for detection in detector.detect(image)]
+    return run_yolo_detection(detector=detector, image=image).results
 
 
 @app.post("/robot/detect/image")
@@ -78,6 +104,31 @@ async def robot_detect_image(
     }
 
 
+@app.post("/robot/detect/camera")
+def robot_detect_camera(request: CameraDetectRequest) -> dict:
+    frame = _read_camera_frame(
+        camera_source=request.camera_source,
+        camera_index=request.camera_index,
+        width=request.width,
+        height=request.height,
+        fps=request.fps,
+        warmup=request.warmup,
+    )
+    vision_result = run_yolo_detection(
+        detector=detector,
+        image=frame,
+        targets=[request.target] if request.target else None,
+        tolerance_ratio=request.tolerance_ratio,
+        diagnostic_confidence=settings.yolo_diagnostic_confidence,
+    )
+    detections = vision_result.detections_for_output
+
+    return {
+        "object_count": len(detections),
+        "objects": [_robot_object_from_detection(detection) for detection in detections],
+    }
+
+
 @app.post("/aim/image")
 async def aim_image(
     target: str = Form(...),
@@ -85,35 +136,33 @@ async def aim_image(
     file: UploadFile = File(...),
 ) -> dict:
     image = await _read_upload(file)
-    return asdict(
-        detector.aim_at(
-            image,
-            target=target,
-            tolerance_ratio=tolerance_ratio,
-            diagnostic_confidence=settings.yolo_diagnostic_confidence,
-        )
-    )
+    return run_yolo_detection(
+        detector=detector,
+        image=image,
+        targets=[target],
+        tolerance_ratio=tolerance_ratio,
+        diagnostic_confidence=settings.yolo_diagnostic_confidence,
+    ).results[0]
 
 
 @app.post("/aim/camera")
 def aim_camera(request: CameraAimRequest) -> dict:
-    capture = cv2.VideoCapture(request.camera_index)
-    try:
-        ok, frame = capture.read()
-    finally:
-        capture.release()
-
-    if not ok:
-        raise HTTPException(status_code=500, detail="Could not read camera frame")
-
-    return asdict(
-        detector.aim_at(
-            frame,
-            target=request.target,
-            tolerance_ratio=request.tolerance_ratio,
-            diagnostic_confidence=settings.yolo_diagnostic_confidence,
-        )
+    frame = _read_camera_frame(
+        camera_source=request.camera_source,
+        camera_index=request.camera_index,
+        width=request.width,
+        height=request.height,
+        fps=request.fps,
+        warmup=request.warmup,
     )
+
+    return run_yolo_detection(
+        detector=detector,
+        image=frame,
+        targets=[request.target],
+        tolerance_ratio=request.tolerance_ratio,
+        diagnostic_confidence=settings.yolo_diagnostic_confidence,
+    ).results[0]
 
 
 @app.post("/faces/candidates")
@@ -209,6 +258,24 @@ async def _read_upload(file: UploadFile):
             os.unlink(tmp_path)
         except OSError:
             pass
+
+
+def _read_camera_frame(camera_source: str, camera_index: int, width: int, height: int, fps: int, warmup: int):
+    try:
+        if camera_source == "orbbec":
+            return capture_orbbec_color_frame(
+                device_index=camera_index,
+                width=width,
+                height=height,
+                fps=fps,
+                warmup=warmup,
+            )
+        if camera_source == "opencv":
+            return capture_opencv_frame(camera_index=camera_index, width=width, height=height, warmup=warmup)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    raise HTTPException(status_code=400, detail=f"Unsupported camera_source: {camera_source}")
 
 
 def _write_output_image(image, output_name: str) -> str:

@@ -67,7 +67,13 @@ Response shape:
 Aim from camera index 0:
 
 ```powershell
-curl -X POST http://127.0.0.1:8000/aim/camera -H "Content-Type: application/json" -d '{"target":"person","camera_index":0}'
+curl -X POST http://127.0.0.1:8000/aim/camera -H "Content-Type: application/json" -d '{"camera_source":"orbbec","target":"person","camera_index":0,"width":1280,"height":720}'
+```
+
+Detect robot-side object boxes from camera index 0:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/robot/detect/camera -H "Content-Type: application/json" -d '{"camera_source":"orbbec","target":"person","camera_index":0,"width":1280,"height":720}'
 ```
 
 ## Face Recognition API
@@ -106,22 +112,16 @@ Annotated face images are written to `images\output`. If dependencies or model w
 python vision_cli.py sample.jpg --target person
 ```
 
-To save an annotated image with detection boxes:
-
-```powershell
-python vision_cli.py sample.jpg --output
-```
-
-Annotated images are written to `images\output`. You can also choose the output filename:
+Annotated images are written to `images\output` by default. You can choose the output filename:
 
 ```powershell
 python vision_cli.py sample.jpg --output annotated.jpg
 ```
 
-You can combine this with target aiming too:
+Or disable image output and print JSON only:
 
 ```powershell
-python vision_cli.py sample.jpg --target person --output annotated.jpg
+python vision_cli.py sample.jpg --no-output
 ```
 
 To see why a target was not found, lower the diagnostic threshold or increase the inference image size:
@@ -141,6 +141,53 @@ Multiple targets can be checked in one call:
 
 ```powershell
 python vision_cli.py sample.jpg --target person bottle mouse
+```
+
+## Orbbec Camera Test
+
+The Orbbec Gemini 335 should be read through OrbbecSDK, not by guessing an OpenCV camera index. On this machine the SDK sees:
+
+```text
+Orbbec Gemini 335
+Serial Number: CP0H9530010C
+Color stream: 1280x720 @ 30 fps
+```
+
+List Orbbec SDK devices:
+
+```powershell
+.\.venv\Scripts\python.exe .\camera_cli.py --list-orbbec
+```
+
+Run one YOLO pass against the live camera:
+
+```powershell
+.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --target person --name orbbec
+```
+
+The JSON result prints to the terminal. The raw input frame is written to `images\orbbec\orbbec-00.jpg`, and the annotated frame is written to `images\output\orbbec\orbbec-00.jpg`.
+
+Run repeated detection for 30 seconds, once every 5 seconds:
+
+```powershell
+.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --target person --name orbbec --duration 30 --interval 5
+```
+
+This writes numbered frames such as `images\orbbec\orbbec-00.jpg`, `images\orbbec\orbbec-01.jpg`, and matching annotated outputs under `images\output\orbbec`.
+
+If Orbbec Viewer or another camera app is open, close it first. OrbbecSDK needs exclusive access to the device stream.
+
+If you intentionally want to test a normal UVC/OpenCV camera instead, use `--source opencv` and probe indices:
+
+```powershell
+@'
+import cv2
+for i in range(8):
+    cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+    ok, frame = cap.read()
+    print(i, "ok" if ok else "no frame", None if frame is None else frame.shape)
+    cap.release()
+'@ | .\.venv\Scripts\python.exe -
 ```
 
 If model download is interrupted, delete the partial weight file and run again. When using the bundled local model, this should not be needed:

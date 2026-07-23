@@ -202,6 +202,10 @@ class YoloDetector:
 
 
 def load_image(path: str | Path) -> np.ndarray:
+    path = Path(path)
+    if not path.is_file():
+        raise ValueError(f"Image file not found: {path}")
+
     image = cv2.imread(str(path))
     if image is None:
         raise ValueError(f"Could not read image: {path}")
