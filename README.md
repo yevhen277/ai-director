@@ -24,6 +24,22 @@ pip install -r requirements.txt
 uvicorn app.api:app --host 127.0.0.1 --port 8000
 ```
 
+DirectorX can be opened from the same API service:
+
+```powershell
+http://127.0.0.1:8000/directorx
+```
+
+To enable LLM-based storyboard planning, configure an OpenAI-compatible chat-completions endpoint in `.env`:
+
+```powershell
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_API_KEY=your_key_here
+LLM_MODEL=your_model_here
+```
+
+DirectorX sends the user's shot request plus the latest camera detection / face-recognition context to `POST /director/plan`. The backend validates the returned A1Z keyframes before the frontend converts them into robot move commands.
+
 Health check:
 
 ```powershell

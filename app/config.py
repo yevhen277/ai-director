@@ -52,6 +52,13 @@ def _positive_int(name: str, default: int) -> int:
     return value
 
 
+def _positive_float(name: str, default: float) -> float:
+    value = float(os.getenv(name, str(default)))
+    if value <= 0:
+        raise ValueError(f"{name} must be greater than 0")
+    return value
+
+
 def _camera_source(name: str, default: str) -> str:
     value = os.getenv(name, default).strip().lower()
     if value not in {"orbbec", "opencv"}:
@@ -75,6 +82,11 @@ class Settings:
     default_camera_source: str = _camera_source("DEFAULT_CAMERA_SOURCE", "orbbec")
     default_camera_index: int = int(os.getenv("DEFAULT_CAMERA_INDEX", "0"))
     camera_run_max_saved_images: int = _positive_int("CAMERA_RUN_MAX_SAVED_IMAGES", 100)
+    llm_base_url: str = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+    llm_api_key: str | None = os.getenv("LLM_API_KEY")
+    llm_model: str | None = os.getenv("LLM_MODEL")
+    llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.4"))
+    llm_timeout_seconds: float = _positive_float("LLM_TIMEOUT_SECONDS", 45.0)
 
 
 settings = Settings()

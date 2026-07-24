@@ -7,6 +7,7 @@ from typing import Literal
 
 import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -21,6 +22,7 @@ from app.camera_runs import (
 )
 from app.config import settings
 from app.detector import YoloDetector, load_image
+from app.director_planner import DirectorPlannerError, PlannerInput, generate_director_plan
 from app.face_recognition import (
     FaceRecognitionService,
     candidate_to_dict,
@@ -37,8 +39,16 @@ from app.vision import run_yolo_detection
 
 OUTPUT_DIR = Path("images") / "output"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+DIRECTORX_HTML = Path(__file__).resolve().parent.parent / "robot_dog" / "directorx.html"
 
 app = FastAPI(title="Director Vision Tool", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 detector = YoloDetector(
     model_path=settings.yolo_model,
@@ -119,9 +129,22 @@ class CameraRunStartRequest(BaseModel):
     replace_existing: bool = True
 
 
+class DirectorPlanRequest(BaseModel):
+    user_prompt: str
+    vision_context: dict | None = None
+    max_duration_seconds: float = 28.0
+
+
 @app.get("/")
 def index():
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/directorx")
+def directorx():
+    if not DIRECTORX_HTML.is_file():
+        raise HTTPException(status_code=404, detail=f"DirectorX page not found: {DIRECTORX_HTML}")
+    return FileResponse(DIRECTORX_HTML)
 
 
 @app.get("/health")
@@ -134,6 +157,20 @@ def health() -> dict[str, str]:
         "default_camera_index": str(settings.default_camera_index),
         "camera_run_max_saved_images": str(settings.camera_run_max_saved_images),
     }
+
+
+@app.post("/director/plan")
+def director_plan(request: DirectorPlanRequest) -> dict:
+    try:
+        return generate_director_plan(
+            PlannerInput(
+                user_prompt=request.user_prompt,
+                vision_context=request.vision_context,
+                max_duration_seconds=request.max_duration_seconds,
+            )
+        )
+    except DirectorPlannerError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/camera/orbbec/devices")
