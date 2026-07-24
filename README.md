@@ -76,6 +76,30 @@ Detect robot-side object boxes from camera index 0:
 curl -X POST http://127.0.0.1:8000/robot/detect/camera -H "Content-Type: application/json" -d '{"camera_source":"orbbec","target":"person","camera_index":0,"width":1280,"height":720}'
 ```
 
+Start continuous camera detection and face recognition in the API:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/camera/runs" -H "Content-Type: application/json" --data-raw "{""camera_source"":""orbbec"",""camera_index"":0,""name"":""orbbec_live"",""width"":1280,""height"":720,""interval"":0.1,""targets"":[""person""],""recognize_faces"":true,""auto_register_dynamic"":true}"
+```
+
+Check the run status with the returned `run_id`:
+
+```powershell
+curl.exe "http://127.0.0.1:8000/camera/runs/RUN_ID"
+```
+
+Download the latest annotated frame:
+
+```powershell
+curl.exe "http://127.0.0.1:8000/camera/runs/RUN_ID/latest-image" --output latest.jpg
+```
+
+Stop the run and release the camera:
+
+```powershell
+curl.exe -X DELETE "http://127.0.0.1:8000/camera/runs/RUN_ID"
+```
+
 ## Face Recognition API
 
 The face recognition flow supports two identity libraries:

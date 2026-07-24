@@ -6,10 +6,18 @@ from pathlib import Path
 from typing import Literal
 
 import cv2
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.camera import capture_opencv_frame, capture_orbbec_color_frame, list_orbbec_devices
+from app.camera_runs import (
+    CameraRunConfig,
+    CameraRunConflictError,
+    CameraRunManager,
+    CameraRunNotFoundError,
+    CameraRunValidationError,
+)
 from app.config import settings
 from app.detector import YoloDetector, load_image
 from app.face_recognition import (
@@ -39,6 +47,7 @@ face_service = FaceRecognitionService(
     registry_path=settings.face_registry_path,
     model_name=settings.face_model,
 )
+camera_run_manager = CameraRunManager(detector=detector, face_service=face_service)
 
 
 class CameraAimRequest(BaseModel):
@@ -86,6 +95,25 @@ class CameraFaceRecognizeRequest(BaseModel):
     output_name: str | None = None
 
 
+class CameraRunStartRequest(BaseModel):
+    camera_source: Literal["orbbec", "opencv"] = "orbbec"
+    camera_index: int = 0
+    name: str | None = None
+    width: int = 1280
+    height: int = 720
+    fps: int = 30
+    warmup: int = 5
+    interval: float = 0.1
+    targets: list[str] | None = None
+    tolerance_ratio: float = 0.08
+    recognize_faces: bool = True
+    include_fixed: bool = True
+    include_dynamic: bool = True
+    auto_register_dynamic: bool = True
+    dynamic_prefix: str = "person"
+    face_threshold: float | None = None
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "model": settings.yolo_model, "face_model": settings.face_model}
@@ -97,6 +125,74 @@ def orbbec_devices() -> dict:
         return {"devices": list_orbbec_devices()}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/camera/runs")
+def start_camera_run(request: CameraRunStartRequest) -> dict:
+    config = CameraRunConfig(
+        camera_source=request.camera_source,
+        camera_index=request.camera_index,
+        name=request.name,
+        width=request.width,
+        height=request.height,
+        fps=request.fps,
+        warmup=request.warmup,
+        interval=request.interval,
+        targets=request.targets,
+        tolerance_ratio=request.tolerance_ratio,
+        diagnostic_confidence=settings.yolo_diagnostic_confidence,
+        recognize_faces=request.recognize_faces,
+        include_fixed=request.include_fixed,
+        include_dynamic=request.include_dynamic,
+        auto_register_dynamic=request.auto_register_dynamic,
+        dynamic_prefix=request.dynamic_prefix,
+        face_threshold=request.face_threshold,
+    )
+    try:
+        run = camera_run_manager.start_run(config)
+    except CameraRunValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CameraRunConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return run.to_dict()
+
+
+@app.get("/camera/runs/{run_id}")
+def camera_run_status(run_id: str) -> dict:
+    try:
+        return camera_run_manager.get_run(run_id).to_dict()
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+
+
+@app.get("/camera/runs/{run_id}/frames")
+def camera_run_frames(run_id: str, limit: int = Query(50, ge=1, le=500)) -> dict:
+    try:
+        return {
+            "run_id": run_id,
+            "frames": camera_run_manager.recent_frames(run_id=run_id, limit=limit),
+        }
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+
+
+@app.get("/camera/runs/{run_id}/latest-image")
+def camera_run_latest_image(run_id: str):
+    try:
+        output_path = camera_run_manager.latest_output_path(run_id)
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+    if output_path is None or not output_path.is_file():
+        raise HTTPException(status_code=404, detail=f"No output image is available for camera run: {run_id}")
+    return FileResponse(path=str(output_path), media_type="image/jpeg", filename=output_path.name)
+
+
+@app.delete("/camera/runs/{run_id}")
+def stop_camera_run(run_id: str) -> dict:
+    try:
+        return camera_run_manager.stop_run(run_id)
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
 
 
 @app.post("/detect/image")

@@ -35,6 +35,7 @@ Common status codes:
 | --- | --- |
 | `400` | Uploaded image cannot be read, or request parameters are invalid. |
 | `404` | `face_id` is unknown or expired when registering a face. |
+| `409` | A continuous camera run is already using the requested camera. |
 | `500` | Camera frame cannot be read, or annotated output image cannot be written. |
 | `503` | Face recognition dependency or model is unavailable. |
 
@@ -283,6 +284,98 @@ Response:
 | `status` | string | Service status. Normal value is `ok`. |
 | `model` | string | Current YOLO model path. |
 | `face_model` | string | Current InsightFace model name. |
+
+### POST /camera/runs
+
+Starts a continuous background camera run. The run keeps the camera open, reads frames at `interval`, runs YOLO detection, runs face recognition, and writes raw plus annotated images until stopped.
+
+Content type: `application/json`
+
+Request body:
+
+```json
+{
+  "camera_source": "orbbec",
+  "camera_index": 0,
+  "name": "orbbec_live",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "warmup": 5,
+  "interval": 0.1,
+  "targets": ["person"],
+  "tolerance_ratio": 0.08,
+  "recognize_faces": true,
+  "include_fixed": true,
+  "include_dynamic": true,
+  "auto_register_dynamic": true,
+  "dynamic_prefix": "person",
+  "face_threshold": null
+}
+```
+
+Response:
+
+```json
+{
+  "run_id": "9f57ef3e-e105-4d8b-8b7c-8e9f2f6d2c48",
+  "status": "starting",
+  "run_name": "orbbec_live",
+  "input_dir": "images\\orbbec_live",
+  "output_dir": "images\\output\\orbbec_live",
+  "frame_count": 0,
+  "started_at": 1760000000.123,
+  "stopped_at": null,
+  "error": null,
+  "latest_sample": null
+}
+```
+
+If the same `camera_source` and `camera_index` already has an active run, the API returns `409`.
+
+### GET /camera/runs/{run_id}
+
+Returns the current status and latest sample for a background camera run.
+
+Request:
+
+```bash
+curl http://127.0.0.1:8000/camera/runs/RUN_ID
+```
+
+`status` is one of `starting`, `running`, `stopping`, `stopped`, or `error`.
+
+### GET /camera/runs/{run_id}/frames
+
+Returns recent frame results for a run. `limit` defaults to `50` and is capped at `500`.
+
+Request:
+
+```bash
+curl "http://127.0.0.1:8000/camera/runs/RUN_ID/frames?limit=50"
+```
+
+### GET /camera/runs/{run_id}/latest-image
+
+Returns the latest annotated JPEG frame for a run.
+
+Request:
+
+```bash
+curl http://127.0.0.1:8000/camera/runs/RUN_ID/latest-image --output latest.jpg
+```
+
+Returns `404` when the run is unknown or no output image has been written yet.
+
+### DELETE /camera/runs/{run_id}
+
+Stops a background camera run and releases the camera.
+
+Request:
+
+```bash
+curl -X DELETE http://127.0.0.1:8000/camera/runs/RUN_ID
+```
 
 ### POST /detect/image
 
