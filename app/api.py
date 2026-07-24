@@ -8,6 +8,7 @@ from typing import Literal
 import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.camera import capture_opencv_frame, capture_orbbec_color_frame, list_orbbec_devices
@@ -35,8 +36,10 @@ from app.vision import run_yolo_detection
 
 
 OUTPUT_DIR = Path("images") / "output"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 app = FastAPI(title="Director Vision Tool", version="0.1.0")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 detector = YoloDetector(
     model_path=settings.yolo_model,
     confidence=settings.yolo_confidence,
@@ -114,6 +117,11 @@ class CameraRunStartRequest(BaseModel):
     face_threshold: float | None = None
     max_saved_images: int = 100
     replace_existing: bool = True
+
+
+@app.get("/")
+def index():
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")

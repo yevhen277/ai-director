@@ -1,6 +1,6 @@
 # Ubuntu 持续实时相机检测与人脸识别使用指南
 
-这份文档说明如何在 Ubuntu 上启动 API，持续读取相机画面，执行 YOLO 物体检测和人脸识别，并查看标注图片、物体名字和框坐标。
+这份文档说明如何在 Ubuntu 上启动 API，通过网页或命令行持续读取相机画面，执行 YOLO 物体检测和人脸识别，并查看标注图片、物体名字和框坐标。
 
 默认服务地址：
 
@@ -94,6 +94,42 @@ curl http://127.0.0.1:8000/health
 
 ## 4. 启动持续实时检测
 
+### 方式 A：网页按钮启动（推荐）
+
+服务启动后，在浏览器打开：
+
+```text
+http://127.0.0.1:8000/
+```
+
+如果服务是用 `--host 0.0.0.0` 启动，并且要从另一台电脑访问，把 `127.0.0.1` 换成这台 Ubuntu 机器的 IP。
+
+网页打开后不会立刻占用相机。点击页面右上角的“启动”按钮后，网页会调用 `POST /camera/runs` 开始持续检测，默认使用：
+
+```json
+{
+  "camera_source": "orbbec",
+  "camera_index": 0,
+  "name": "web_live",
+  "interval": 0.1,
+  "targets": null,
+  "recognize_faces": true,
+  "auto_register_dynamic": true,
+  "max_saved_images": 100,
+  "replace_existing": true
+}
+```
+
+网页会每 0.1 秒刷新一次状态，并展示：
+
+- 最新标注输出图片
+- 最新一帧识别到的物品名字、置信度和坐标 `[x1, y1, x2, y2]`
+- 最新一帧识别到的人脸身份、库类型、相似度和坐标 `[x1, y1, x2, y2]`
+
+点击“停止”按钮会调用 `DELETE /camera/runs/{run_id}`，停止后台任务并释放相机。
+
+### 方式 B：命令行启动
+
 调用 `POST /camera/runs` 会启动一个后台任务。这个任务会一直读取相机画面，持续执行：
 
 1. YOLO 物体检测
@@ -106,10 +142,8 @@ curl http://127.0.0.1:8000/health
 
 ### Orbbec 相机启动命令
 
-这条命令会启动检测，并把返回的 `run_id` 自动保存到当前终端的 `runId` 变量里：
-
 ```bash
-runResponse=$(curl -s -X POST "http://127.0.0.1:8000/camera/runs" \
+curl -X POST "http://127.0.0.1:8000/camera/runs" \
   -H "Content-Type: application/json" \
   -d '{
     "camera_source": "orbbec",
@@ -125,17 +159,13 @@ runResponse=$(curl -s -X POST "http://127.0.0.1:8000/camera/runs" \
     "dynamic_prefix": "person",
     "max_saved_images": 100,
     "replace_existing": true
-  }')
-
-runId=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])' <<< "$runResponse")
-echo "$runResponse" | python3 -m json.tool
-echo "runId=$runId"
+  }'
 ```
 
 ### 普通 USB/OpenCV 相机启动命令
 
 ```bash
-runResponse=$(curl -s -X POST "http://127.0.0.1:8000/camera/runs" \
+curl -X POST "http://127.0.0.1:8000/camera/runs" \
   -H "Content-Type: application/json" \
   -d '{
     "camera_source": "opencv",
@@ -149,11 +179,7 @@ runResponse=$(curl -s -X POST "http://127.0.0.1:8000/camera/runs" \
     "auto_register_dynamic": true,
     "max_saved_images": 100,
     "replace_existing": true
-  }')
-
-runId=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])' <<< "$runResponse")
-echo "$runResponse" | python3 -m json.tool
-echo "runId=$runId"
+  }'
 ```
 
 如果你想改成只保留最新 30 帧图片，把 `max_saved_images` 改成：
@@ -177,14 +203,14 @@ echo "runId=$runId"
 }
 ```
 
-如果看到 `runId=9f57...` 这种输出，说明变量已经保存好了。后面查询、取图、停止都可以直接用 `$runId`，不用手动替换真实 ID。
+记住返回的 `run_id`，后面查询、取图、停止都要用它。
 
 ## 5. 查看运行状态
 
-如果你是按第 4 节启动的，直接运行：
+把下面命令里的 `RUN_ID` 换成真实的 `run_id`：
 
 ```bash
-curl "http://127.0.0.1:8000/camera/runs/$runId"
+curl "http://127.0.0.1:8000/camera/runs/RUN_ID"
 ```
 
 你会看到类似：
@@ -284,7 +310,7 @@ latest_sample.results[0].miss_reason
 如果你想看 YOLO 识别到的所有物体，不要传 `targets`：
 
 ```bash
-runResponse=$(curl -s -X POST "http://127.0.0.1:8000/camera/runs" \
+curl -X POST "http://127.0.0.1:8000/camera/runs" \
   -H "Content-Type: application/json" \
   -d '{
     "camera_source": "orbbec",
@@ -297,11 +323,7 @@ runResponse=$(curl -s -X POST "http://127.0.0.1:8000/camera/runs" \
     "auto_register_dynamic": true,
     "max_saved_images": 100,
     "replace_existing": true
-  }')
-
-runId=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])' <<< "$runResponse")
-echo "$runResponse" | python3 -m json.tool
-echo "runId=$runId"
+  }'
 ```
 
 这种模式下，每个物体都在：
@@ -325,7 +347,7 @@ latest_sample.results
 查看最近 50 帧：
 
 ```bash
-curl "http://127.0.0.1:8000/camera/runs/$runId/frames?limit=50"
+curl "http://127.0.0.1:8000/camera/runs/RUN_ID/frames?limit=50"
 ```
 
 返回里的每一帧都有：
@@ -386,7 +408,7 @@ images/output/orbbec_live/orbbec_live-000128.jpg
 也可以通过接口下载最新一张标注图：
 
 ```bash
-curl "http://127.0.0.1:8000/camera/runs/$runId/latest-image" --output latest.jpg
+curl "http://127.0.0.1:8000/camera/runs/RUN_ID/latest-image" --output latest.jpg
 ```
 
 下载后查看：
@@ -402,13 +424,13 @@ xdg-open latest.jpg
 停止后台任务并释放相机：
 
 ```bash
-curl -X DELETE "http://127.0.0.1:8000/camera/runs/$runId"
+curl -X DELETE "http://127.0.0.1:8000/camera/runs/RUN_ID"
 ```
 
 停止后再次查询：
 
 ```bash
-curl "http://127.0.0.1:8000/camera/runs/$runId"
+curl "http://127.0.0.1:8000/camera/runs/RUN_ID"
 ```
 
 如果看到：
@@ -495,7 +517,7 @@ curl "http://127.0.0.1:8000/faces/identities"
 如果你把 `replace_existing` 设置成 `false`，并且同一个相机已经有任务在跑，才会返回 409。此时先停止旧任务：
 
 ```bash
-curl -X DELETE "http://127.0.0.1:8000/camera/runs/$runId"
+curl -X DELETE "http://127.0.0.1:8000/camera/runs/RUN_ID"
 ```
 
 如果忘了 `run_id`，最简单的方法是重启 API 服务。
@@ -505,7 +527,7 @@ curl -X DELETE "http://127.0.0.1:8000/camera/runs/$runId"
 查询状态：
 
 ```bash
-curl "http://127.0.0.1:8000/camera/runs/$runId"
+curl "http://127.0.0.1:8000/camera/runs/RUN_ID"
 ```
 
 看返回里的：

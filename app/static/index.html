@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>相机检测</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f4;
+      --panel: #ffffff;
+      --text: #1f261f;
+      --muted: #687165;
+      --line: #d9e0d5;
+      --accent: #25705a;
+      --accent-strong: #185341;
+      --danger: #b4382f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .app {
+      width: min(1280px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 20px 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .badge {
+      min-width: 76px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #edf4ef;
+      color: var(--accent-strong);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    button {
+      min-height: 38px;
+      border: 0;
+      border-radius: 6px;
+      padding: 0 14px;
+      background: var(--danger);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .start-button {
+      background: var(--accent);
+    }
+
+    .start-button:hover:not(:disabled) {
+      background: var(--accent-strong);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .photo-panel,
+    .list-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .photo-frame {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-height: 360px;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #e7ece4;
+    }
+
+    .photo-frame img {
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #111511;
+    }
+
+    .empty-photo {
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 15px;
+    }
+
+    .list-panel {
+      min-height: 360px;
+      overflow: hidden;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .side-stack .list-panel {
+      min-height: 220px;
+    }
+
+    .list-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .list-head h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .count {
+      min-width: 46px;
+      color: var(--accent-strong);
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .objects {
+      display: grid;
+      gap: 0;
+      max-height: calc(100vh - 142px);
+      overflow: auto;
+    }
+
+    .object-row {
+      display: grid;
+      grid-template-columns: minmax(80px, 1fr) minmax(140px, 1.35fr);
+      gap: 8px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .object-row:last-child {
+      border-bottom: 0;
+    }
+
+    .label {
+      min-width: 0;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .confidence {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .box {
+      color: var(--muted);
+      font-family: Consolas, "Courier New", monospace;
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    .message {
+      padding: 16px 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .error {
+      color: var(--danger);
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        width: min(100vw - 20px, 720px);
+        padding: 12px 0;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .photo-frame,
+      .list-panel {
+        min-height: 260px;
+      }
+
+      .objects {
+        max-height: 360px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>相机检测</h1>
+        <div class="status-row">
+          <span id="statusBadge" class="badge">未启动</span>
+          <span>帧：<strong id="frameCount">0</strong></span>
+          <span id="runIdText"></span>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="startButton" class="start-button" type="button">启动</button>
+        <button id="stopButton" type="button" disabled>停止</button>
+      </div>
+    </header>
+
+    <section class="layout">
+      <div class="photo-panel">
+        <div class="photo-frame">
+          <img id="latestImage" alt="最新检测输出照片">
+          <div id="photoEmpty" class="empty-photo">等待最新照片</div>
+        </div>
+      </div>
+
+      <aside class="side-stack">
+        <section class="list-panel">
+          <div class="list-head">
+            <h2>识别物品</h2>
+            <span id="objectCount" class="count">0</span>
+          </div>
+          <div id="objectList" class="objects">
+            <div class="message">等待检测结果</div>
+          </div>
+        </section>
+
+        <section class="list-panel">
+          <div class="list-head">
+            <h2>识别人脸</h2>
+            <span id="faceCount" class="count">0</span>
+          </div>
+          <div id="faceList" class="objects">
+            <div class="message">等待人脸识别结果</div>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const POLL_MS = 100;
+
+    const state = {
+      runId: null,
+      lastFrameCount: 0,
+      stopped: false,
+      pollTimer: null
+    };
+
+    const statusBadge = document.getElementById("statusBadge");
+    const frameCount = document.getElementById("frameCount");
+    const runIdText = document.getElementById("runIdText");
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+    const latestImage = document.getElementById("latestImage");
+    const photoEmpty = document.getElementById("photoEmpty");
+    const objectCount = document.getElementById("objectCount");
+    const objectList = document.getElementById("objectList");
+    const faceCount = document.getElementById("faceCount");
+    const faceList = document.getElementById("faceList");
+
+    function setStatus(text, isError = false) {
+      statusBadge.textContent = text;
+      statusBadge.classList.toggle("error", isError);
+    }
+
+    function showListMessage(countElement, listElement, text, isError = false) {
+      countElement.textContent = "0";
+      listElement.innerHTML = "";
+      const message = document.createElement("div");
+      message.className = isError ? "message error" : "message";
+      message.textContent = text;
+      listElement.appendChild(message);
+    }
+
+    function showObjectMessage(text, isError = false) {
+      showListMessage(objectCount, objectList, text, isError);
+    }
+
+    function showFaceMessage(text, isError = false) {
+      showListMessage(faceCount, faceList, text, isError);
+    }
+
+    function normalizeDetection(item) {
+      const detection = item && item.detection ? item.detection : item;
+      if (!detection || !detection.label || !Array.isArray(detection.box)) {
+        return null;
+      }
+      return {
+        label: detection.label,
+        confidence: Number(detection.confidence),
+        box: detection.box
+      };
+    }
+
+    function renderObjects(results) {
+      const detections = (Array.isArray(results) ? results : [])
+        .map(normalizeDetection)
+        .filter(Boolean);
+
+      objectCount.textContent = String(detections.length);
+      objectList.innerHTML = "";
+
+      if (detections.length === 0) {
+        showObjectMessage("暂无识别结果");
+        return;
+      }
+
+      for (const detection of detections) {
+        const row = document.createElement("div");
+        row.className = "object-row";
+
+        const name = document.createElement("div");
+        name.className = "label";
+        name.textContent = detection.label;
+
+        const confidence = document.createElement("div");
+        confidence.className = "confidence";
+        confidence.textContent = Number.isFinite(detection.confidence)
+          ? `${Math.round(detection.confidence * 100)}%`
+          : "";
+        name.appendChild(confidence);
+
+        const box = document.createElement("div");
+        box.className = "box";
+        box.textContent = `[${detection.box.join(", ")}]`;
+
+        row.append(name, box);
+        objectList.appendChild(row);
+      }
+    }
+
+    function renderFaces(faceRecognition) {
+      const matches = faceRecognition && Array.isArray(faceRecognition.matches)
+        ? faceRecognition.matches
+        : [];
+
+      faceCount.textContent = String(matches.length);
+      faceList.innerHTML = "";
+
+      if (matches.length === 0) {
+        const reason = faceRecognition && faceRecognition.miss_reason
+          ? `暂无人脸匹配：${faceRecognition.miss_reason}`
+          : "暂无人脸识别结果";
+        showFaceMessage(reason);
+        return;
+      }
+
+      for (const match of matches) {
+        const row = document.createElement("div");
+        row.className = "object-row";
+
+        const name = document.createElement("div");
+        name.className = "label";
+        name.textContent = match.identity || "unknown";
+
+        const detail = document.createElement("div");
+        detail.className = "confidence";
+        const similarity = Number(match.similarity);
+        const similarityText = Number.isFinite(similarity)
+          ? `${Math.round(similarity * 100)}%`
+          : "无相似度";
+        detail.textContent = `${match.library || "none"} · ${similarityText}`;
+        name.appendChild(detail);
+
+        const box = document.createElement("div");
+        box.className = "box";
+        box.textContent = Array.isArray(match.box) ? `[${match.box.join(", ")}]` : "[]";
+
+        row.append(name, box);
+        faceList.appendChild(row);
+      }
+    }
+
+    async function startRun() {
+      state.stopped = false;
+      clearTimeout(state.pollTimer);
+      startButton.disabled = true;
+      stopButton.disabled = true;
+      frameCount.textContent = "0";
+      runIdText.textContent = "";
+      latestImage.removeAttribute("src");
+      latestImage.style.display = "none";
+      photoEmpty.style.display = "block";
+      setStatus("启动中");
+      showObjectMessage("等待检测结果");
+      showFaceMessage("等待人脸识别结果");
+
+      try {
+        const response = await fetch("/camera/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            camera_source: "orbbec",
+            camera_index: 0,
+            name: "web_live",
+            interval: 0.1,
+            targets: null,
+            recognize_faces: true,
+            auto_register_dynamic: true,
+            max_saved_images: 100,
+            replace_existing: true
+          })
+        });
+
+        if (!response.ok) {
+          const detail = await readError(response);
+          throw new Error(detail || `启动失败：HTTP ${response.status}`);
+        }
+
+        const run = await response.json();
+        state.runId = run.run_id;
+        state.lastFrameCount = 0;
+        stopButton.disabled = false;
+        runIdText.textContent = run.run_id ? `run_id：${run.run_id}` : "";
+        renderStatus(run);
+        schedulePoll(0);
+      } catch (error) {
+        state.runId = null;
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        setStatus("错误", true);
+        showObjectMessage(error.message || String(error), true);
+        showFaceMessage(error.message || String(error), true);
+      }
+    }
+
+    function renderStatus(run) {
+      const status = run.status || "unknown";
+      setStatus(status, status === "error");
+      frameCount.textContent = String(run.frame_count || 0);
+
+      const sample = run.latest_sample;
+      renderObjects(sample ? sample.results : []);
+      renderFaces(sample ? sample.face_recognition : null);
+
+      if (sample && run.frame_count && run.frame_count !== state.lastFrameCount) {
+        state.lastFrameCount = run.frame_count;
+        latestImage.src = `/camera/runs/${encodeURIComponent(state.runId)}/latest-image?v=${run.frame_count}`;
+        latestImage.style.display = "block";
+        photoEmpty.style.display = "none";
+      }
+
+      if (run.error) {
+        showObjectMessage(run.error, true);
+        showFaceMessage(run.error, true);
+      }
+    }
+
+    async function pollRun() {
+      if (state.stopped || !state.runId) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/camera/runs/${encodeURIComponent(state.runId)}`);
+        if (!response.ok) {
+          const detail = await readError(response);
+          throw new Error(detail || `刷新失败：HTTP ${response.status}`);
+        }
+        const run = await response.json();
+        renderStatus(run);
+
+        if (["stopped", "error"].includes(run.status)) {
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          return;
+        }
+      } catch (error) {
+        setStatus("错误", true);
+        showObjectMessage(error.message || String(error), true);
+        showFaceMessage(error.message || String(error), true);
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      }
+
+      schedulePoll(POLL_MS);
+    }
+
+    function schedulePoll(delay) {
+      clearTimeout(state.pollTimer);
+      state.pollTimer = setTimeout(pollRun, delay);
+    }
+
+    async function stopRun() {
+      if (!state.runId) {
+        return;
+      }
+
+      state.stopped = true;
+      clearTimeout(state.pollTimer);
+      stopButton.disabled = true;
+      setStatus("停止中");
+
+      try {
+        const response = await fetch(`/camera/runs/${encodeURIComponent(state.runId)}`, {
+          method: "DELETE"
+        });
+        if (!response.ok) {
+          const detail = await readError(response);
+          throw new Error(detail || `停止失败：HTTP ${response.status}`);
+        }
+        const run = await response.json();
+        renderStatus(run);
+        startButton.disabled = false;
+      } catch (error) {
+        setStatus("错误", true);
+        showObjectMessage(error.message || String(error), true);
+        showFaceMessage(error.message || String(error), true);
+        startButton.disabled = false;
+      }
+    }
+
+    async function readError(response) {
+      try {
+        const data = await response.json();
+        return typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || data);
+      } catch {
+        return response.statusText;
+      }
+    }
+
+    startButton.addEventListener("click", startRun);
+    stopButton.addEventListener("click", stopRun);
+  </script>
+</body>
+</html>
