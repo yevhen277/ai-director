@@ -40,7 +40,8 @@ from app.vision import run_yolo_detection
 
 OUTPUT_DIR = Path("images") / "output"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-DIRECTORX_HTML = Path(__file__).resolve().parent.parent / "robot_dog" / "directorx.html"
+DIRECTORX_DIR = Path(__file__).resolve().parent.parent / "robot_dog"
+DIRECTORX_HTML = DIRECTORX_DIR / "directorx.html"
 
 app = FastAPI(title="Director Vision Tool", version="0.1.0")
 app.add_middleware(
@@ -51,6 +52,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/directorx-assets", StaticFiles(directory=DIRECTORX_DIR), name="directorx-assets")
 detector = YoloDetector(
     model_path=settings.yolo_model,
     confidence=settings.yolo_confidence,
@@ -139,6 +141,13 @@ class CameraRunStartRequest(BaseModel):
     tcp_face_timeout_seconds: float = settings.tcp_face_timeout_seconds
     tcp_face_send_fps: int = settings.tcp_face_send_fps
     tcp_face_track_ttl_seconds: float = settings.tcp_face_track_ttl_seconds
+
+
+class CameraRunTcpTargetRequest(BaseModel):
+    source_type: Literal["object", "face"]
+    identity: str
+    box: list[float]
+    label: str | None = None
 
 
 class DirectorPlanRequest(BaseModel):
@@ -357,6 +366,31 @@ async def camera_run_boxes(websocket: WebSocket, run_id: str):
             await websocket.close()
         except RuntimeError:
             pass
+
+
+@app.post("/camera/runs/{run_id}/tcp-target")
+def select_camera_run_tcp_target(run_id: str, request: CameraRunTcpTargetRequest) -> dict:
+    identity = request.identity.strip()
+    if not identity:
+        raise HTTPException(status_code=400, detail="identity cannot be empty")
+    if len(request.box) != 4:
+        raise HTTPException(status_code=400, detail="box must contain four coordinates")
+    try:
+        box = tuple(int(round(float(value))) for value in request.box)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="box coordinates must be numeric") from exc
+    try:
+        return camera_run_manager.select_tcp_target(
+            run_id=run_id,
+            source_type=request.source_type,
+            identity=identity,
+            box=box,
+            label=request.label,
+        )
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+    except CameraRunValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.delete("/camera/runs/{run_id}")

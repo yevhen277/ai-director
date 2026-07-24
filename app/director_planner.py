@@ -138,6 +138,8 @@ Output schema:
 }}
 
 Rules:
+- Match the user's language for all human-readable planning text: title, summary, shot name, and desc.
+- Keep machine-readable fields unchanged: tech must use the enum labels, keyframes/t0/t1 must remain numeric.
 - You may receive an actual camera image. Use it to infer scene mood, lighting, subject placement, and whether the user's described subject is present.
 - The summary must mention what is actually visible in the image. If the requested subject or mood is not clearly visible, state that uncertainty and plan a cautious establish/search shot.
 - Use 2 to 5 shots, total duration <= {max_duration_seconds:.1f} seconds.
@@ -153,15 +155,28 @@ Rules:
 
 
 def _user_prompt(planner_input: PlannerInput) -> str:
+    output_language = _detect_user_language(planner_input.user_prompt)
     return json.dumps(
         {
             "user_prompt": planner_input.user_prompt,
+            "output_language": output_language,
+            "language_rule": f"Return title, summary, shot name, and desc in {output_language}, matching the user's prompt language.",
             "vision_context": planner_input.vision_context or {},
             "image_attached": bool(planner_input.image_path),
         },
         ensure_ascii=False,
         indent=2,
     )
+
+
+def _detect_user_language(text: str) -> str:
+    if re.search(r"[\u4e00-\u9fff]", text or ""):
+        return "Chinese"
+    if re.search(r"[\u3040-\u30ff]", text or ""):
+        return "Japanese"
+    if re.search(r"[\uac00-\ud7af]", text or ""):
+        return "Korean"
+    return "English"
 
 
 def _image_data_url(image_path: str | Path) -> str:

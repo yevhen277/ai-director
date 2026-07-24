@@ -71,6 +71,14 @@ def build_face_status_tcp_payload(
     found: bool,
     box: tuple[int, int, int, int] | None,
 ) -> dict[str, Any]:
+    return build_vision_target_tcp_payload(identity=identity, found=found, box=box)
+
+
+def build_vision_target_tcp_payload(
+    identity: str,
+    found: bool,
+    box: tuple[int, int, int, int] | None,
+) -> dict[str, Any]:
     return {
         "identity": identity,
         "found": found,
