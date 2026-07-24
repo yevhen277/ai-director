@@ -112,6 +112,7 @@ class CameraRunStartRequest(BaseModel):
     auto_register_dynamic: bool = True
     dynamic_prefix: str = "person"
     face_threshold: float | None = None
+    max_saved_images: int = 100
 
 
 @app.get("/health")
@@ -147,6 +148,7 @@ def start_camera_run(request: CameraRunStartRequest) -> dict:
         auto_register_dynamic=request.auto_register_dynamic,
         dynamic_prefix=request.dynamic_prefix,
         face_threshold=request.face_threshold,
+        max_saved_images=request.max_saved_images,
     )
     try:
         run = camera_run_manager.start_run(config)

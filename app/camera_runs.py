@@ -38,6 +38,7 @@ class CameraRunConfig:
     auto_register_dynamic: bool = True
     dynamic_prefix: str = "person"
     face_threshold: float | None = None
+    max_saved_images: int = 100
 
 
 class CameraRunConflictError(RuntimeError):
@@ -77,6 +78,7 @@ class CameraRun:
         self.frame_count = 0
         self.latest_sample: dict | None = None
         self.frames: deque[dict] = deque(maxlen=history_size)
+        self._saved_samples: deque[dict] = deque()
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._run, name=f"camera-run-{self.run_id}", daemon=True)
@@ -102,6 +104,7 @@ class CameraRun:
                 "camera_index": self.config.camera_index,
                 "input_dir": str(self.input_dir),
                 "output_dir": str(self.output_dir),
+                "max_saved_images": self.config.max_saved_images,
                 "frame_count": self.frame_count,
                 "started_at": self.started_at,
                 "stopped_at": self.stopped_at,
@@ -158,6 +161,8 @@ class CameraRun:
                         self.frame_count = frame_number
                         self.latest_sample = sample
                         self.frames.append(sample)
+                        self._saved_samples.append(sample)
+                    self._prune_saved_images()
                     frame_number += 1
 
             self._mark_done(status="stopped")
@@ -208,6 +213,22 @@ class CameraRun:
             "results": vision_result.results,
             "face_recognition": face_result,
         }
+
+    def _prune_saved_images(self) -> None:
+        samples_to_delete = []
+        with self._lock:
+            while len(self._saved_samples) > self.config.max_saved_images:
+                samples_to_delete.append(self._saved_samples.popleft())
+
+        for sample in samples_to_delete:
+            for key in ("input_path", "output_path"):
+                path_value = sample.get(key)
+                if not path_value:
+                    continue
+                try:
+                    Path(path_value).unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def _mark_done(self, status: RunStatus, error: str | None = None) -> None:
         with self._lock:
@@ -312,6 +333,8 @@ def _validate_config(config: CameraRunConfig) -> None:
         raise CameraRunValidationError("tolerance_ratio must be greater than or equal to 0")
     if not config.dynamic_prefix.strip():
         raise CameraRunValidationError("dynamic_prefix cannot be empty")
+    if config.max_saved_images < 1:
+        raise CameraRunValidationError("max_saved_images must be greater than or equal to 1")
 
 
 def _clean_run_name(name: str) -> str:

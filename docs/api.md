@@ -310,7 +310,8 @@ Request body:
   "include_dynamic": true,
   "auto_register_dynamic": true,
   "dynamic_prefix": "person",
-  "face_threshold": null
+  "face_threshold": null,
+  "max_saved_images": 100
 }
 ```
 
@@ -323,6 +324,7 @@ Response:
   "run_name": "orbbec_live",
   "input_dir": "images\\orbbec_live",
   "output_dir": "images\\output\\orbbec_live",
+  "max_saved_images": 100,
   "frame_count": 0,
   "started_at": 1760000000.123,
   "stopped_at": null,
@@ -332,6 +334,8 @@ Response:
 ```
 
 If the same `camera_source` and `camera_index` already has an active run, the API returns `409`.
+
+Each run keeps only the latest `max_saved_images` frame images on disk. The default is `100`; older raw and annotated files are deleted automatically.
 
 ### GET /camera/runs/{run_id}
 
