@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 import cv2
 import numpy as np
@@ -53,6 +54,8 @@ class OrbbecColorCamera:
         fps: int = 30,
         warmup: int = 5,
         timeout_ms: int = 1000,
+        open_retries: int = 3,
+        open_retry_delay: float = 1.0,
     ):
         self.device_index = device_index
         self.width = width
@@ -60,6 +63,8 @@ class OrbbecColorCamera:
         self.fps = fps
         self.warmup = warmup
         self.timeout_ms = timeout_ms
+        self.open_retries = open_retries
+        self.open_retry_delay = open_retry_delay
         self.pipeline = None
 
     def __enter__(self):
@@ -69,32 +74,39 @@ class OrbbecColorCamera:
             raise RuntimeError("pyorbbecsdk2 is not installed. Install it before using Orbbec cameras.") from exc
 
         self._ob_error = OBError
-        self.context = Context()
-        devices = self.context.query_devices()
-        if devices.get_count() == 0:
-            raise RuntimeError("No Orbbec device found")
-        if self.device_index < 0 or self.device_index >= devices.get_count():
-            raise RuntimeError(
-                f"Orbbec device index {self.device_index} is out of range; found {devices.get_count()} device(s)"
-            )
+        attempts = max(1, self.open_retries)
+        for attempt in range(attempts):
+            try:
+                self.context = Context()
+                devices = self.context.query_devices()
+                if devices.get_count() == 0:
+                    raise RuntimeError("No Orbbec device found")
+                if self.device_index < 0 or self.device_index >= devices.get_count():
+                    raise RuntimeError(
+                        f"Orbbec device index {self.device_index} is out of range; found {devices.get_count()} device(s)"
+                    )
 
-        device = devices.get_device_by_index(self.device_index)
-        self.pipeline = Pipeline(device)
-        config = Config()
+                device = devices.get_device_by_index(self.device_index)
+                self.pipeline = Pipeline(device)
+                config = Config()
 
-        try:
-            profiles = self.pipeline.get_stream_profile_list(OBSensorType.COLOR_SENSOR)
-            profile = _choose_color_profile(profiles, width=self.width, height=self.height, fps=self.fps)
-            config.enable_stream(profile)
-            self.pipeline.start(config)
-            self.read(warmup=self.warmup)
-            return self
-        except OBError as exc:
-            self.__exit__(None, None, None)
-            self._raise_orbbec_runtime_error(exc)
-        except Exception:
-            self.__exit__(None, None, None)
-            raise
+                profiles = self.pipeline.get_stream_profile_list(OBSensorType.COLOR_SENSOR)
+                profile = _choose_color_profile(profiles, width=self.width, height=self.height, fps=self.fps)
+                config.enable_stream(profile)
+                self.pipeline.start(config)
+                self.read(warmup=self.warmup)
+                return self
+            except OBError as exc:
+                self.__exit__(None, None, None)
+                if attempt + 1 < attempts and _is_retryable_orbbec_error(exc):
+                    time.sleep(max(0.0, self.open_retry_delay))
+                    continue
+                self._raise_orbbec_runtime_error(exc)
+            except Exception:
+                self.__exit__(None, None, None)
+                raise
+
+        raise RuntimeError("Could not open Orbbec camera")
 
     def __exit__(self, exc_type, exc, traceback):
         if self.pipeline is not None:
@@ -129,13 +141,7 @@ class OrbbecColorCamera:
             self._raise_orbbec_runtime_error(exc)
 
     def _raise_orbbec_runtime_error(self, exc):
-        message = str(exc)
-        if "0xc00d3704" in message or "MFT" in message:
-            raise RuntimeError(
-                "Orbbec color stream is busy or Windows Media Foundation could not start it. "
-                "Close Orbbec Viewer and other camera apps, then try again."
-            ) from exc
-        raise RuntimeError(f"Orbbec SDK error: {exc}") from exc
+        raise _build_orbbec_runtime_error(exc, action=f"open Orbbec device index {self.device_index}") from exc
 
 
 def capture_opencv_frame(camera_index: int = 0, width: int = 1280, height: int = 720, warmup: int = 5) -> np.ndarray:
@@ -150,6 +156,8 @@ def capture_orbbec_color_frame(
     fps: int = 30,
     warmup: int = 5,
     timeout_ms: int = 1000,
+    open_retries: int = 3,
+    open_retry_delay: float = 1.0,
 ) -> np.ndarray:
     with OrbbecColorCamera(
         device_index=device_index,
@@ -158,22 +166,31 @@ def capture_orbbec_color_frame(
         fps=fps,
         warmup=warmup,
         timeout_ms=timeout_ms,
+        open_retries=open_retries,
+        open_retry_delay=open_retry_delay,
     ) as camera:
         return camera.read()
 
 
 def list_orbbec_devices() -> list[dict]:
     try:
-        from pyorbbecsdk import Context
+        from pyorbbecsdk import Context, OBError
     except ImportError as exc:
         raise RuntimeError("pyorbbecsdk2 is not installed. Install it before using Orbbec cameras.") from exc
 
-    context = Context()
-    devices = context.query_devices()
+    try:
+        context = Context()
+        devices = context.query_devices()
+    except OBError as exc:
+        raise _build_orbbec_runtime_error(exc, action="list Orbbec devices") from exc
+
     result = []
     for index in range(devices.get_count()):
-        device = devices.get_device_by_index(index)
-        info = device.get_device_info()
+        try:
+            device = devices.get_device_by_index(index)
+            info = device.get_device_info()
+        except OBError as exc:
+            raise _build_orbbec_runtime_error(exc, action=f"read Orbbec device index {index}") from exc
         result.append(
             {
                 "index": index,
@@ -187,6 +204,43 @@ def list_orbbec_devices() -> list[dict]:
             }
         )
     return result
+
+
+def _is_retryable_orbbec_error(exc) -> bool:
+    message = str(exc)
+    retryable_fragments = (
+        "responsesize",
+        "response header size",
+        "propertyId: 2001",
+        "statusCode: 8",
+        "setXu",
+        "0xc00d3704",
+        "MFT",
+    )
+    return any(fragment in message for fragment in retryable_fragments)
+
+
+def _build_orbbec_runtime_error(exc, action: str) -> RuntimeError:
+    message = str(exc)
+    if "0xc00d3704" in message or "MFT" in message:
+        return RuntimeError(
+            f"Orbbec SDK could not {action}: the color stream is busy or Windows Media Foundation could not start it. "
+            "Close Orbbec Viewer and other camera apps, then try again."
+        )
+    if (
+        "responsesize" in message
+        or "response header size" in message
+        or "propertyId: 2001" in message
+        or "statusCode: 8" in message
+        or "setXu" in message
+    ):
+        return RuntimeError(
+            f"Orbbec SDK could see a device but could not {action}: the USB control response was invalid. "
+            "Close Orbbec Viewer and other camera apps, unplug/replug the camera, use a direct USB 3 port, "
+            "then run with --list-orbbec before starting the live sender again. "
+            f"SDK detail: {exc}"
+        )
+    return RuntimeError(f"Orbbec SDK error while trying to {action}: {exc}")
 
 
 def _choose_color_profile(profiles, width: int | None, height: int | None, fps: int):

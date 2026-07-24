@@ -258,6 +258,46 @@ If you intentionally want object detection only, disable face recognition:
 .\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --name orbbec --no-recognize-faces
 ```
 
+## DirectorX TCP Face Sender
+
+When this Windows machine is `192.168.1.100` and the Ubuntu machine is `192.168.1.101`, run a TCP server on Ubuntu and let DirectorX connect to it. Agree on a TCP port first; the examples below use `9000`.
+
+Quick Ubuntu receiver for testing:
+
+```bash
+python3 - <<'PY'
+import socket
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("0.0.0.0", 9000))
+    server.listen(1)
+    print("listening on 0.0.0.0:9000")
+    while True:
+        conn, addr = server.accept()
+        print("connected:", addr)
+        with conn, conn.makefile("r", encoding="utf-8") as lines:
+            for line in lines:
+                print(line.rstrip())
+        print("disconnected:", addr)
+PY
+```
+
+DirectorX camera runs send the payload automatically when enabled in `.env`:
+
+```powershell
+TCP_FACE_ENABLED=true
+TCP_FACE_HOST=192.168.1.101
+TCP_FACE_PORT=9000
+TCP_FACE_IDENTITY=zhangzhan
+```
+
+Each TCP message is one UTF-8 JSON object followed by `\n`, for example:
+
+```json
+{"identity":"zhangzhan","found":true,"box":{"x1":420,"y1":160,"x2":620,"y2":420}}
+```
+
 If Orbbec Viewer or another camera app is open, close it first. OrbbecSDK needs exclusive access to the device stream.
 
 If you intentionally want to test a normal UVC/OpenCV camera instead, use `--source opencv` and probe indices:

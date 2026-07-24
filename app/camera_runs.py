@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 import uuid
+import logging
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,10 +14,25 @@ import cv2
 from app.camera import OpenCVCamera, OrbbecColorCamera
 from app.detector import YoloDetector, draw_detections
 from app.face_recognition import FaceRecognitionService, draw_face_matches, recognition_result_to_dict
+from app.tcp_sender import (
+    TcpJsonLineClient,
+    TcpTarget,
+    build_face_status_tcp_payload,
+    build_face_tcp_payload,
+)
 from app.vision import run_yolo_detection
 
 
 RunStatus = Literal["starting", "running", "stopping", "stopped", "error"]
+TCP_FACE_LOG_PATH = Path("Log") / "tcp_face_auto.log"
+tcp_face_logger = logging.getLogger("director.tcp_face")
+if not tcp_face_logger.handlers:
+    TCP_FACE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler(TCP_FACE_LOG_PATH, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    tcp_face_logger.addHandler(handler)
+    tcp_face_logger.setLevel(logging.INFO)
+    tcp_face_logger.propagate = False
 
 
 @dataclass(frozen=True)
@@ -41,6 +57,11 @@ class CameraRunConfig:
     max_saved_images: int = 100
     preview_fps: int = 10
     preview_jpeg_quality: int = 80
+    tcp_face_enabled: bool = False
+    tcp_face_host: str = "192.168.1.101"
+    tcp_face_port: int = 9000
+    tcp_face_identity: str = "zhangzhan"
+    tcp_face_timeout_seconds: float = 0.2
 
 
 class CameraRunConflictError(RuntimeError):
@@ -89,6 +110,7 @@ class CameraRun:
         self._stop_event = threading.Event()
         self._latest_frame = None
         self._latest_preview_jpeg: bytes | None = None
+        self._tcp_face_client: TcpJsonLineClient | None = None
         self._started_monotonic = time.monotonic()
         self._capture_thread = threading.Thread(
             target=self._run_capture,
@@ -231,49 +253,52 @@ class CameraRun:
             self._mark_done(status="error", error=str(exc))
 
     def _run_analysis(self) -> None:
-        frame_number = 1
-        while not self._stop_event.is_set():
-            due_time = self._started_monotonic + (frame_number - 1) * self.config.interval
-            sleep_for = due_time - time.monotonic()
-            if sleep_for > 0 and self._stop_event.wait(sleep_for):
-                break
-
-            frame_snapshot = None
-            preview_frame_count = 0
-            with self._frame_condition:
-                self._frame_condition.wait_for(
-                    lambda: self._stop_event.is_set() or self._latest_frame is not None or self.status == "error",
-                    timeout=1.0,
-                )
-                if self._stop_event.is_set() or self.status == "error":
+        try:
+            frame_number = 1
+            while not self._stop_event.is_set():
+                due_time = self._started_monotonic + (frame_number - 1) * self.config.interval
+                sleep_for = due_time - time.monotonic()
+                if sleep_for > 0 and self._stop_event.wait(sleep_for):
                     break
-                if self._latest_frame is not None:
-                    frame_snapshot = self._latest_frame.copy()
-                    preview_frame_count = self.preview_frame_count
 
-            if frame_snapshot is None:
-                continue
+                frame_snapshot = None
+                preview_frame_count = 0
+                with self._frame_condition:
+                    self._frame_condition.wait_for(
+                        lambda: self._stop_event.is_set() or self._latest_frame is not None or self.status == "error",
+                        timeout=1.0,
+                    )
+                    if self._stop_event.is_set() or self.status == "error":
+                        break
+                    if self._latest_frame is not None:
+                        frame_snapshot = self._latest_frame.copy()
+                        preview_frame_count = self.preview_frame_count
 
-            try:
-                sample = self._run_sample(
-                    frame=frame_snapshot,
-                    frame_number=frame_number,
-                    elapsed_seconds=round(time.monotonic() - self._started_monotonic, 3),
-                    preview_frame_count=preview_frame_count,
-                )
-            except Exception as exc:
-                self._mark_done(status="error", error=str(exc))
-                break
+                if frame_snapshot is None:
+                    continue
 
-            with self._lock:
-                if self.status == "error":
+                try:
+                    sample = self._run_sample(
+                        frame=frame_snapshot,
+                        frame_number=frame_number,
+                        elapsed_seconds=round(time.monotonic() - self._started_monotonic, 3),
+                        preview_frame_count=preview_frame_count,
+                    )
+                except Exception as exc:
+                    self._mark_done(status="error", error=str(exc))
                     break
-                self.frame_count = frame_number
-                self.latest_sample = sample
-                self.frames.append(sample)
-                self._saved_samples.append(sample)
-            self._prune_saved_images()
-            frame_number += 1
+
+                with self._lock:
+                    if self.status == "error":
+                        break
+                    self.frame_count = frame_number
+                    self.latest_sample = sample
+                    self.frames.append(sample)
+                    self._saved_samples.append(sample)
+                self._prune_saved_images()
+                frame_number += 1
+        finally:
+            self._close_tcp_face_client()
 
     def _run_sample(self, frame, frame_number: int, elapsed_seconds: float, preview_frame_count: int) -> dict:
         image_name = f"{self.run_name}-{frame_number:06d}.jpg"
@@ -293,6 +318,7 @@ class CameraRun:
 
         face_result = None
         face_matches: Iterable = []
+        recognition_result = None
         if self.config.recognize_faces:
             recognition_result = self.face_service.recognize_registered_identities(
                 image=frame,
@@ -304,6 +330,7 @@ class CameraRun:
             )
             face_result = recognition_result_to_dict(recognition_result)
             face_matches = recognition_result.matches
+        tcp_face_result = self._send_tcp_face_result(recognition_result, frame_number)
 
         annotated = draw_detections(frame, vision_result.detections_for_output)
         if self.config.recognize_faces:
@@ -319,7 +346,84 @@ class CameraRun:
             "output_path": str(output_path),
             "results": vision_result.results,
             "face_recognition": face_result,
+            "tcp_face": tcp_face_result,
         }
+
+    def _send_tcp_face_result(self, recognition_result, frame_number: int) -> dict | None:
+        if not self.config.tcp_face_enabled:
+            return None
+
+        identity = self.config.tcp_face_identity.strip()
+        if not identity:
+            return {"enabled": True, "sent": False, "error": "tcp_face_identity is empty"}
+
+        match = None
+        if recognition_result is not None:
+            match = next((candidate for candidate in recognition_result.matches if candidate.identity == identity), None)
+
+        payload = (
+            build_face_tcp_payload(
+                match=match,
+                sequence=frame_number,
+                camera_source=self.config.camera_source,
+                camera_index=self.config.camera_index,
+            )
+            if match is not None
+            else build_face_status_tcp_payload(identity=identity, found=False, box=None)
+        )
+
+        try:
+            self._tcp_face().send(payload)
+            tcp_face_logger.info(
+                "sent target=%s:%s identity=%s found=%s box=%s",
+                self.config.tcp_face_host,
+                self.config.tcp_face_port,
+                identity,
+                payload["found"],
+                payload["box"],
+            )
+            return {
+                "enabled": True,
+                "sent": True,
+                "identity": identity,
+                "found": payload["found"],
+                "error": None,
+            }
+        except OSError as exc:
+            self._close_tcp_face_client()
+            tcp_face_logger.warning(
+                "failed target=%s:%s identity=%s found=%s box=%s error=%s",
+                self.config.tcp_face_host,
+                self.config.tcp_face_port,
+                identity,
+                payload["found"],
+                payload["box"],
+                exc,
+            )
+            return {
+                "enabled": True,
+                "sent": False,
+                "identity": identity,
+                "found": payload["found"],
+                "error": str(exc),
+            }
+
+    def _tcp_face(self) -> TcpJsonLineClient:
+        if self._tcp_face_client is None:
+            self._tcp_face_client = TcpJsonLineClient(
+                TcpTarget(
+                    host=self.config.tcp_face_host,
+                    port=self.config.tcp_face_port,
+                    timeout_seconds=self.config.tcp_face_timeout_seconds,
+                )
+            )
+        return self._tcp_face_client
+
+    def _close_tcp_face_client(self) -> None:
+        if self._tcp_face_client is None:
+            return
+        self._tcp_face_client.close()
+        self._tcp_face_client = None
 
     def _prune_saved_images(self) -> None:
         samples_to_delete = []
@@ -458,6 +562,15 @@ def _validate_config(config: CameraRunConfig) -> None:
         raise CameraRunValidationError("tolerance_ratio must be greater than or equal to 0")
     if not config.dynamic_prefix.strip():
         raise CameraRunValidationError("dynamic_prefix cannot be empty")
+    if config.tcp_face_enabled:
+        if not config.tcp_face_host.strip():
+            raise CameraRunValidationError("tcp_face_host cannot be empty")
+        if config.tcp_face_port <= 0 or config.tcp_face_port > 65535:
+            raise CameraRunValidationError("tcp_face_port must be between 1 and 65535")
+        if not config.tcp_face_identity.strip():
+            raise CameraRunValidationError("tcp_face_identity cannot be empty")
+        if config.tcp_face_timeout_seconds <= 0:
+            raise CameraRunValidationError("tcp_face_timeout_seconds must be greater than 0")
     if config.max_saved_images < 1:
         raise CameraRunValidationError("max_saved_images must be greater than or equal to 1")
     if config.preview_fps <= 0:

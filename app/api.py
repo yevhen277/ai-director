@@ -129,6 +129,11 @@ class CameraRunStartRequest(BaseModel):
     replace_existing: bool = True
     preview_fps: int = 10
     preview_jpeg_quality: int = 80
+    tcp_face_enabled: bool = settings.tcp_face_enabled
+    tcp_face_host: str = settings.tcp_face_host
+    tcp_face_port: int = settings.tcp_face_port
+    tcp_face_identity: str = settings.tcp_face_identity
+    tcp_face_timeout_seconds: float = settings.tcp_face_timeout_seconds
 
 
 class DirectorPlanRequest(BaseModel):
@@ -155,6 +160,11 @@ def director_config() -> dict:
         "vision_run": {
             "camera_source": settings.default_camera_source,
             "camera_index": settings.default_camera_index,
+            "tcp_face_enabled": settings.tcp_face_enabled,
+            "tcp_face_host": settings.tcp_face_host,
+            "tcp_face_port": settings.tcp_face_port,
+            "tcp_face_identity": settings.tcp_face_identity,
+            "tcp_face_timeout_seconds": settings.tcp_face_timeout_seconds,
         },
         "planner": {
             "mode": settings.director_plan_mode,
@@ -232,6 +242,11 @@ def start_camera_run(request: CameraRunStartRequest) -> dict:
         max_saved_images=request.max_saved_images,
         preview_fps=request.preview_fps,
         preview_jpeg_quality=request.preview_jpeg_quality,
+        tcp_face_enabled=request.tcp_face_enabled,
+        tcp_face_host=request.tcp_face_host,
+        tcp_face_port=request.tcp_face_port,
+        tcp_face_identity=request.tcp_face_identity,
+        tcp_face_timeout_seconds=request.tcp_face_timeout_seconds,
     )
     try:
         run = camera_run_manager.start_run(config, replace_existing=request.replace_existing)

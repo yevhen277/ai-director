@@ -89,6 +89,11 @@ class Settings:
     default_camera_source: str = _camera_source("DEFAULT_CAMERA_SOURCE", "orbbec")
     default_camera_index: int = int(os.getenv("DEFAULT_CAMERA_INDEX", "0"))
     camera_run_max_saved_images: int = _positive_int("CAMERA_RUN_MAX_SAVED_IMAGES", 100)
+    tcp_face_enabled: bool = _optional_bool("TCP_FACE_ENABLED") or False
+    tcp_face_host: str = os.getenv("TCP_FACE_HOST", "192.168.1.101")
+    tcp_face_port: int = int(os.getenv("TCP_FACE_PORT", "9000"))
+    tcp_face_identity: str = os.getenv("TCP_FACE_IDENTITY", "zhangzhan")
+    tcp_face_timeout_seconds: float = _positive_float("TCP_FACE_TIMEOUT_SECONDS", 0.2)
     llm_base_url: str = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
     llm_api_key: str | None = os.getenv("LLM_API_KEY")
     llm_model: str | None = os.getenv("LLM_MODEL")
