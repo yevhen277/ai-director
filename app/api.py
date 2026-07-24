@@ -54,8 +54,8 @@ camera_run_manager = CameraRunManager(detector=detector, face_service=face_servi
 
 
 class CameraAimRequest(BaseModel):
-    camera_source: Literal["orbbec", "opencv"] = "orbbec"
-    camera_index: int = 0
+    camera_source: Literal["orbbec", "opencv"] = settings.default_camera_source
+    camera_index: int = settings.default_camera_index
     target: str
     width: int = 1280
     height: int = 720
@@ -65,8 +65,8 @@ class CameraAimRequest(BaseModel):
 
 
 class CameraDetectRequest(BaseModel):
-    camera_source: Literal["orbbec", "opencv"] = "orbbec"
-    camera_index: int = 0
+    camera_source: Literal["orbbec", "opencv"] = settings.default_camera_source
+    camera_index: int = settings.default_camera_index
     target: str | None = None
     width: int = 1280
     height: int = 720
@@ -83,8 +83,8 @@ class FaceRegisterRequest(BaseModel):
 
 
 class CameraFaceRecognizeRequest(BaseModel):
-    camera_source: Literal["orbbec", "opencv"] = "orbbec"
-    camera_index: int = 0
+    camera_source: Literal["orbbec", "opencv"] = settings.default_camera_source
+    camera_index: int = settings.default_camera_index
     width: int = 1280
     height: int = 720
     fps: int = 30
@@ -99,8 +99,8 @@ class CameraFaceRecognizeRequest(BaseModel):
 
 
 class CameraRunStartRequest(BaseModel):
-    camera_source: Literal["orbbec", "opencv"] = "orbbec"
-    camera_index: int = 0
+    camera_source: Literal["orbbec", "opencv"] = settings.default_camera_source
+    camera_index: int = settings.default_camera_index
     name: str | None = None
     width: int = 1280
     height: int = 720
@@ -115,7 +115,7 @@ class CameraRunStartRequest(BaseModel):
     auto_register_dynamic: bool = True
     dynamic_prefix: str = "person"
     face_threshold: float | None = None
-    max_saved_images: int = 100
+    max_saved_images: int = settings.camera_run_max_saved_images
     replace_existing: bool = True
 
 
@@ -126,7 +126,14 @@ def index():
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "model": settings.yolo_model, "face_model": settings.face_model}
+    return {
+        "status": "ok",
+        "model": settings.yolo_model,
+        "face_model": settings.face_model,
+        "default_camera_source": settings.default_camera_source,
+        "default_camera_index": str(settings.default_camera_index),
+        "camera_run_max_saved_images": str(settings.camera_run_max_saved_images),
+    }
 
 
 @app.get("/camera/orbbec/devices")

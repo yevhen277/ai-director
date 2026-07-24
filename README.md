@@ -225,18 +225,18 @@ Run repeated detection for 30 seconds, once every 5 seconds:
 
 This writes numbered frames such as `images\orbbec\orbbec-00.jpg`, `images\orbbec\orbbec-01.jpg`, and matching annotated outputs under `images\output\orbbec`.
 
-To label fixed-library people such as `person01` and `person02` in the CLI output images, first register those identities through the face API, then add `--recognize-faces`:
+CLI camera runs now enable face recognition and dynamic face auto-registration by default, so the JSON for each sample includes `face_recognition` and annotated output images include face labels when faces are detected:
 
 ```powershell
-.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --name orbbec_faces --duration 2 --interval 0.1 --width 1280 --height 720 --recognize-faces
+.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --name orbbec_faces --duration 2 --interval 0.1 --width 1280 --height 720
 ```
 
-The JSON for each sample includes `face_recognition`. If it says `miss_reason: no_registered_identities`, create `data\face_registry.json` by registering faces first.
+If it says `miss_reason: no_registered_identities`, keep dynamic registration enabled or create `data\face_registry.json` by registering fixed faces first.
 
-To maintain a restart-cleared dynamic library during one CLI run, use `--auto-register-faces`:
+If you intentionally want object detection only, disable face recognition:
 
 ```powershell
-.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --name orbbec_faces --duration 2 --interval 0.1 --width 1280 --height 720 --auto-register-faces
+.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --name orbbec --no-recognize-faces
 ```
 
 If Orbbec Viewer or another camera app is open, close it first. OrbbecSDK needs exclusive access to the device stream.

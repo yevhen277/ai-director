@@ -36,6 +36,15 @@ uvicorn app.api:app --host 127.0.0.1 --port 8000
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/health"
 ```
 
+如果要让网页默认使用本机摄像头，确认 `.env` 里有：
+
+```text
+DEFAULT_CAMERA_SOURCE=opencv
+DEFAULT_CAMERA_INDEX=0
+```
+
+修改 `.env` 后要重启 API 服务才会生效。`opencv` 表示本机/USB 摄像头，`0` 通常是默认摄像头索引。
+
 ## 2. 启动持续实时检测
 
 ### 方式 A：网页按钮启动（推荐）
@@ -46,7 +55,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/health"
 http://127.0.0.1:8000/
 ```
 
-网页打开后不会立刻占用相机。点击页面右上角的“启动”按钮后，网页才会开始相机识别，默认使用 Orbbec 相机并启用：
+网页打开后不会立刻占用相机。点击页面右上角的“启动”按钮后，网页才会开始相机识别。网页会使用 `.env` 里的 `DEFAULT_CAMERA_SOURCE` 和 `DEFAULT_CAMERA_INDEX`，并启用：
 
 ```text
 YOLO 物品检测
@@ -363,7 +372,7 @@ $sourceImage
 如果你想手动指定图片，也可以这样：
 
 ```powershell
-$sourceImage = "images\orbbec_live\orbbec_live-000001.jpg"
+$sourceImage = "images\web_live\web_live-000002.jpg"
 ```
 
 ### 第二步：检测这张图里有哪些人脸
@@ -412,7 +421,7 @@ output_path
 如果图片里只有一个人脸，可以直接取第一个：
 
 ```powershell
-$faceId = $candidates.faces[0].face_id
+$faceId = dd2878fc-c4ff-4087-a261-2e01a3dca91b
 $faceId
 ```
 
@@ -424,7 +433,7 @@ $faceId
 
 ```powershell
 $body = @{
-  identity = "zhangzhan"
+  identity = "yeyuanyuan"
   face_id = $faceId
   source_image = $sourceImage
 } | ConvertTo-Json -Compress

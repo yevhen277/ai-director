@@ -52,6 +52,8 @@ YOLO_CONFIDENCE=0.2
 FACE_MODEL=buffalo_l
 FACE_THRESHOLD=0.45
 FACE_REGISTRY_PATH=data/face_registry.json
+DEFAULT_CAMERA_SOURCE=opencv
+DEFAULT_CAMERA_INDEX=0
 ```
 
 说明：
@@ -60,6 +62,8 @@ FACE_REGISTRY_PATH=data/face_registry.json
 - `FACE_MODEL` 默认是 InsightFace 的 `buffalo_l`。
 - `FACE_REGISTRY_PATH` 是固定人脸库保存位置。
 - 动态人脸库只在内存里，API 服务重启后自动清空。
+- `DEFAULT_CAMERA_SOURCE` 是网页和相机接口默认使用的摄像头来源。`opencv` 表示本机/USB 摄像头，`orbbec` 表示 Orbbec 相机。
+- `DEFAULT_CAMERA_INDEX` 是默认摄像头索引。本机摄像头通常是 `0`。
 
 ## 3. 启动 API 服务
 
@@ -104,21 +108,16 @@ http://127.0.0.1:8000/
 
 如果服务是用 `--host 0.0.0.0` 启动，并且要从另一台电脑访问，把 `127.0.0.1` 换成这台 Ubuntu 机器的 IP。
 
-网页打开后不会立刻占用相机。点击页面右上角的“启动”按钮后，网页会调用 `POST /camera/runs` 开始持续检测，默认使用：
+网页打开后不会立刻占用相机。点击页面右上角的“启动”按钮后，网页会调用 `POST /camera/runs` 开始持续检测。网页不写死相机来源，会使用 `.env` 里的 `DEFAULT_CAMERA_SOURCE` 和 `DEFAULT_CAMERA_INDEX`。
 
-```json
-{
-  "camera_source": "orbbec",
-  "camera_index": 0,
-  "name": "web_live",
-  "interval": 0.1,
-  "targets": null,
-  "recognize_faces": true,
-  "auto_register_dynamic": true,
-  "max_saved_images": 100,
-  "replace_existing": true
-}
+当前如果要临时使用本机摄像头，`.env` 里设置：
+
+```text
+DEFAULT_CAMERA_SOURCE=opencv
+DEFAULT_CAMERA_INDEX=0
 ```
+
+修改 `.env` 后需要重启 API 服务才会生效。
 
 网页会每 0.1 秒刷新一次状态，并展示：
 

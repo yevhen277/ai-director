@@ -457,14 +457,11 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            camera_source: "orbbec",
-            camera_index: 0,
             name: "web_live",
             interval: 0.1,
             targets: null,
             recognize_faces: true,
             auto_register_dynamic: true,
-            max_saved_images: 100,
             replace_existing: true
           })
         });

@@ -73,13 +73,29 @@ def main() -> None:
     parser.add_argument("--tolerance", type=float, default=0.08, help="Centering tolerance as frame ratio")
     parser.add_argument(
         "--recognize-faces",
+        dest="recognize_faces",
         action="store_true",
-        help="Recognize all registered face identities and draw identity labels on annotated output images.",
+        default=True,
+        help="Recognize all registered face identities and draw identity labels on annotated output images. Enabled by default.",
+    )
+    parser.add_argument(
+        "--no-recognize-faces",
+        dest="recognize_faces",
+        action="store_false",
+        help="Disable face recognition for this camera run.",
     )
     parser.add_argument(
         "--auto-register-faces",
+        dest="auto_register_faces",
         action="store_true",
-        help="Automatically add first-seen unmatched faces to the in-memory dynamic face library.",
+        default=True,
+        help="Automatically add first-seen unmatched faces to the in-memory dynamic face library. Enabled by default.",
+    )
+    parser.add_argument(
+        "--no-auto-register-faces",
+        dest="auto_register_faces",
+        action="store_false",
+        help="Disable dynamic face auto-registration for this camera run.",
     )
     parser.add_argument("--dynamic-face-prefix", default="person", help="Prefix for dynamic identities, e.g. person -> person01")
     parser.add_argument(
@@ -111,13 +127,14 @@ def main() -> None:
             image_size=args.imgsz,
             end2end=args.end2end,
         )
+        effective_auto_register_faces = args.recognize_faces and args.auto_register_faces
         face_service = (
             FaceRecognitionService(
                 registry_path=args.face_registry,
                 model_name=args.face_model,
                 dynamic_prefix=args.dynamic_face_prefix,
             )
-            if args.recognize_faces or args.auto_register_faces
+            if args.recognize_faces
             else None
         )
     except (RuntimeError, ValueError) as exc:
@@ -166,7 +183,7 @@ def main() -> None:
                     diagnostic_confidence=args.diagnostic_confidence,
                     face_service=face_service,
                     face_threshold=args.face_threshold,
-                    auto_register_faces=args.auto_register_faces,
+                    auto_register_faces=effective_auto_register_faces,
                     dynamic_face_prefix=args.dynamic_face_prefix,
                 )
                 sample["index"] = sample_index

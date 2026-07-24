@@ -45,6 +45,20 @@ def _optional_bool(name: str) -> bool | None:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def _positive_int(name: str, default: int) -> int:
+    value = int(os.getenv(name, str(default)))
+    if value < 1:
+        raise ValueError(f"{name} must be greater than or equal to 1")
+    return value
+
+
+def _camera_source(name: str, default: str) -> str:
+    value = os.getenv(name, default).strip().lower()
+    if value not in {"orbbec", "opencv"}:
+        raise ValueError(f"{name} must be 'orbbec' or 'opencv'")
+    return value
+
+
 load_env_file()
 
 
@@ -58,6 +72,9 @@ class Settings:
     face_model: str = os.getenv("FACE_MODEL", "buffalo_l")
     face_threshold: float = float(os.getenv("FACE_THRESHOLD", str(DEFAULT_FACE_THRESHOLD)))
     face_registry_path: str = os.getenv("FACE_REGISTRY_PATH", str(Path("data") / "face_registry.json"))
+    default_camera_source: str = _camera_source("DEFAULT_CAMERA_SOURCE", "orbbec")
+    default_camera_index: int = int(os.getenv("DEFAULT_CAMERA_INDEX", "0"))
+    camera_run_max_saved_images: int = _positive_int("CAMERA_RUN_MAX_SAVED_IMAGES", 100)
 
 
 settings = Settings()
