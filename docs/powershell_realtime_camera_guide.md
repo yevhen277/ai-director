@@ -2,6 +2,8 @@
 
 这份文档给新手使用：在 Windows 上通过网页或 PowerShell 启动持续实时相机检测，让后端一直读取相机画面，执行 YOLO 物体检测和人脸识别，并持续输出标注图片。
 
+本文所有 PowerShell 命令都按 Windows PowerShell 5.1 编写。
+
 默认地址：
 
 ```text
@@ -187,6 +189,7 @@ $status.latest_sample.output_path
 ```powershell
 Invoke-WebRequest `
   -Uri "http://127.0.0.1:8000/camera/runs/$runId/latest-image" `
+  -UseBasicParsing `
   -OutFile ".\latest.jpg"
 ```
 
@@ -251,14 +254,15 @@ $status.latest_sample.results | Select-Object label, confidence, box
 这种模式返回的是“目标对准结果”，物品名字和框坐标在：
 
 ```text
-latest_sample.results[0].detection
+@($status.latest_sample.results)[0].detection
 ```
 
 查看最新目标：
 
 ```powershell
 $status = Invoke-RestMethod -Uri "http://127.0.0.1:8000/camera/runs/$runId"
-$status.latest_sample.results[0].detection
+$targetResult = @($status.latest_sample.results)[0]
+$targetResult.detection
 ```
 
 返回类似：
@@ -274,7 +278,8 @@ $status.latest_sample.results[0].detection
 只取名字和坐标：
 
 ```powershell
-$detection = $status.latest_sample.results[0].detection
+$targetResult = @($status.latest_sample.results)[0]
+$detection = $targetResult.detection
 $detection.label
 $detection.box
 ```
@@ -282,8 +287,9 @@ $detection.box
 如果没有识别到目标，`detection` 会是空值，可以看：
 
 ```powershell
-$status.latest_sample.results[0].found
-$status.latest_sample.results[0].miss_reason
+$targetResult = @($status.latest_sample.results)[0]
+$targetResult.found
+$targetResult.miss_reason
 ```
 
 ## 6. 查看最近多帧结果
@@ -378,16 +384,15 @@ $sourceImage = "images\web_live\web_live-000002.jpg"
 ### 第二步：检测这张图里有哪些人脸
 
 ```powershell
-$form = @{
-  file = Get-Item $sourceImage
-  annotate = "true"
-}
+$fullPath = (Resolve-Path $sourceImage).Path
 
-$candidates = Invoke-RestMethod `
-  -Uri "http://127.0.0.1:8000/faces/candidates" `
-  -Method Post `
-  -Form $form
+$json = curl.exe -s `
+  -X POST `
+  --form "file=@$fullPath" `
+  --form "annotate=true" `
+  "http://127.0.0.1:8000/faces/candidates"
 
+$candidates = $json | ConvertFrom-Json
 $candidates
 ```
 
@@ -396,6 +401,7 @@ $candidates
 ```text
 faces[].face_id
 faces[].box
+faces[].confidence
 output_path
 ```
 
@@ -407,6 +413,7 @@ output_path
   "faces": [
     {
       "face_id": "5f524e21-cf79-48ed-9ccb-f5072b0d7d3f",
+      "confidence": 0.94,
       "box": [180, 90, 260, 210]
     }
   ],
@@ -421,11 +428,30 @@ output_path
 如果图片里只有一个人脸，可以直接取第一个：
 
 ```powershell
-$faceId = dd2878fc-c4ff-4087-a261-2e01a3dca91b
+$faceId = "d8a82c28-2e87-4ba1-975e-e3ec8c7d2daf"
 $faceId
 ```
 
-如果图片里有多个人脸，需要根据 `output_path` 里的框，选择对应的 `face_id`。
+注意：`@($candidates.faces)[0]` 只是候选列表里的第一个人脸，不保证是置信度最高的人脸。
+
+如果图片里有多个人脸，需要根据 `output_path` 里的框，选择对应的 `face_id`。也可以先打印候选脸列表：
+
+```powershell
+$candidates.faces | Select-Object face_id, confidence, box
+```
+
+如果你想自动选择置信度最高的人脸，可以这样取：
+
+```powershell
+$faceId = (@($candidates.faces) | Sort-Object confidence -Descending | Select-Object -First 1).face_id
+$faceId
+```
+
+如果你已经从列表里确认了某个具体的 `face_id`，手动指定时要加引号：
+
+```powershell
+$faceId = "dd2878fc-c4ff-4087-a261-2e01a3dca91b"
+```
 
 ### 第四步：注册成固定身份
 
@@ -502,7 +528,9 @@ Invoke-RestMethod `
 
 ### PowerShell 里 curl 报 JSON 错误
 
-PowerShell 的引号规则容易把 JSON 传坏。建议用本文里的 `Invoke-RestMethod`，不要直接手写一长串 `curl.exe --data-raw "{...}"`。
+PowerShell 的引号规则容易把 JSON 传坏。发送 JSON 请求时，建议用本文里的 `Invoke-RestMethod -Body $body -ContentType "application/json"`，不要直接手写一长串 `curl.exe --data-raw "{...}"`。
+
+上传图片这种 `multipart/form-data` 请求是例外。Windows PowerShell 5.1 的 `Invoke-RestMethod` 没有 `-Form` 参数，所以本文上传图片统一使用 `curl.exe --form`。
 
 ### 返回 409
 
@@ -523,7 +551,7 @@ Invoke-RestMethod `
 先确认你用了哪种启动方式：
 
 - 没有传 `targets`：坐标在 `$status.latest_sample.results`
-- 传了 `targets = @("person")`：坐标在 `$status.latest_sample.results[0].detection`
+- 传了 `targets = @("person")`：坐标在 `@($status.latest_sample.results)[0].detection`
 
 ### 标注图片没有变化
 
