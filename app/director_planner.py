@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import math
+import mimetypes
 import os
 import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from app.config import settings
@@ -48,6 +50,7 @@ class DirectorPlannerError(RuntimeError):
 class PlannerInput:
     user_prompt: str
     vision_context: dict[str, Any] | None = None
+    image_path: str | Path | None = None
     max_duration_seconds: float = 28.0
 
 
@@ -62,12 +65,19 @@ def generate_director_plan(planner_input: PlannerInput) -> dict[str, Any]:
 
 
 def _call_chat_completions(planner_input: PlannerInput) -> dict[str, Any]:
+    user_content: str | list[dict[str, Any]] = _user_prompt(planner_input)
+    if planner_input.image_path:
+        user_content = [
+            {"type": "text", "text": _user_prompt(planner_input)},
+            {"type": "image_url", "image_url": {"url": _image_data_url(planner_input.image_path)}},
+        ]
+
     payload = {
         "model": settings.llm_model,
         "temperature": settings.llm_temperature,
         "messages": [
             {"role": "system", "content": _system_prompt(planner_input.max_duration_seconds)},
-            {"role": "user", "content": _user_prompt(planner_input)},
+            {"role": "user", "content": user_content},
         ],
         "response_format": {"type": "json_object"},
     }
@@ -128,6 +138,8 @@ Output schema:
 }}
 
 Rules:
+- You may receive an actual camera image. Use it to infer scene mood, lighting, subject placement, and whether the user's described subject is present.
+- The summary must mention what is actually visible in the image. If the requested subject or mood is not clearly visible, state that uncertainty and plan a cautious establish/search shot.
 - Use 2 to 5 shots, total duration <= {max_duration_seconds:.1f} seconds.
 - First keyframe of the first shot should usually be "home".
 - Adjacent shots must connect smoothly: first keyframe of a shot should equal the previous shot's last pose at the same time.
@@ -145,10 +157,22 @@ def _user_prompt(planner_input: PlannerInput) -> str:
         {
             "user_prompt": planner_input.user_prompt,
             "vision_context": planner_input.vision_context or {},
+            "image_attached": bool(planner_input.image_path),
         },
         ensure_ascii=False,
         indent=2,
     )
+
+
+def _image_data_url(image_path: str | Path) -> str:
+    path = Path(image_path)
+    if not path.is_file():
+        raise DirectorPlannerError(f"Planner image not found: {path}")
+    mime = mimetypes.guess_type(str(path))[0] or "image/jpeg"
+    import base64
+
+    data = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{data}"
 
 
 def _parse_json_object(content: str) -> dict[str, Any]:
@@ -175,14 +199,26 @@ def _validate_plan(plan: dict[str, Any], max_duration_seconds: float) -> dict[st
         if not isinstance(shot, dict):
             raise DirectorPlannerError("Each shot must be an object")
         keyframes = shot.get("keyframes")
-        if not isinstance(keyframes, list) or len(keyframes) < 2:
-            raise DirectorPlannerError("Each shot must contain at least 2 keyframes")
+        if not isinstance(keyframes, list):
+            keyframes = []
+        if len(keyframes) < 2:
+            previous_pose = validated_shots[-1]["keyframes"][-1][0] if validated_shots else SAFE_POSES["home"]
+            keyframes = _repair_short_keyframes(
+                keyframes=keyframes,
+                shot=shot,
+                shot_index=shot_index,
+                last_time=last_time,
+                previous_pose=previous_pose,
+                max_duration_seconds=max_duration_seconds,
+            )
 
         validated_keyframes = []
         for frame in keyframes:
             if not isinstance(frame, list | tuple) or len(frame) != 2:
                 raise DirectorPlannerError("Each keyframe must be [[q1..q6], t]")
             q, t = frame
+            if isinstance(q, str) and q in SAFE_POSES:
+                q = SAFE_POSES[q]
             if not isinstance(q, list | tuple) or len(q) != 6:
                 raise DirectorPlannerError("Each keyframe pose must contain exactly 6 joints")
             q_validated = [_clamp_joint(float(value), i) for i, value in enumerate(q)]
@@ -225,6 +261,69 @@ def _validate_plan(plan: dict[str, Any], max_duration_seconds: float) -> dict[st
         "total": round(total, 3),
         "source": "llm",
     }
+
+
+def _repair_short_keyframes(
+    *,
+    keyframes: list[Any],
+    shot: dict[str, Any],
+    shot_index: int,
+    last_time: float,
+    previous_pose: list[float],
+    max_duration_seconds: float,
+) -> list[Any]:
+    duration = _fallback_duration(shot, last_time, max_duration_seconds)
+    end_time = round(last_time + duration, 3)
+    tech = str(shot.get("tech") or "")
+    target_pose = _pose_for_tech(tech, shot_index)
+
+    if keyframes and _is_keyframe_like(keyframes[0]):
+        q, t = keyframes[0]
+        if isinstance(q, str) and q in SAFE_POSES:
+            q = SAFE_POSES[q]
+        t_value = _finite_float(t)
+        if t_value is not None and t_value > last_time + 0.05:
+            return [[previous_pose, last_time], [q, t_value]]
+        return [[q, last_time], [target_pose, end_time]]
+
+    return [[previous_pose, last_time], [target_pose, end_time]]
+
+
+def _fallback_duration(shot: dict[str, Any], last_time: float, max_duration_seconds: float) -> float:
+    raw_t1 = _finite_float(shot.get("t1"))
+    if raw_t1 is not None and raw_t1 > last_time + 0.4:
+        return max(0.8, min(5.0, raw_t1 - last_time))
+    remaining = max_duration_seconds - last_time
+    return max(0.8, min(3.5, remaining if remaining > 0 else 0.8))
+
+
+def _pose_for_tech(tech: str, shot_index: int) -> list[float]:
+    upper = tech.upper()
+    if "DOLLY" in upper or "CLOSE" in upper:
+        return SAFE_POSES["close"]
+    if "ARC" in upper:
+        return SAFE_POSES["orbL1" if shot_index % 2 else "orbR1"]
+    if "TOP" in upper:
+        return SAFE_POSES["top"]
+    if "LOW" in upper:
+        return SAFE_POSES["lowPre"]
+    if "TRUCK" in upper or "SWEEP" in upper:
+        return SAFE_POSES["swpA" if shot_index % 2 else "swpB"]
+    if "RECOVER" in upper or "FINAL" in upper:
+        return SAFE_POSES["home"]
+    return SAFE_POSES["far" if shot_index == 0 else "home"]
+
+
+def _is_keyframe_like(frame: Any) -> bool:
+    return isinstance(frame, list | tuple) and len(frame) == 2
+
+
+def _finite_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _clamp_joint(value: float, index: int) -> float:

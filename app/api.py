@@ -8,7 +8,7 @@ from typing import Literal
 import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -127,6 +127,8 @@ class CameraRunStartRequest(BaseModel):
     face_threshold: float | None = None
     max_saved_images: int = settings.camera_run_max_saved_images
     replace_existing: bool = True
+    preview_fps: int = 10
+    preview_jpeg_quality: int = 80
 
 
 class DirectorPlanRequest(BaseModel):
@@ -147,6 +149,21 @@ def directorx():
     return FileResponse(DIRECTORX_HTML)
 
 
+@app.get("/director/config")
+def director_config() -> dict:
+    return {
+        "vision_run": {
+            "camera_source": settings.default_camera_source,
+            "camera_index": settings.default_camera_index,
+        },
+        "planner": {
+            "mode": settings.director_plan_mode,
+            "model": settings.llm_model,
+            "configured": bool(settings.llm_api_key and settings.llm_model),
+        },
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {
@@ -156,16 +173,27 @@ def health() -> dict[str, str]:
         "default_camera_source": settings.default_camera_source,
         "default_camera_index": str(settings.default_camera_index),
         "camera_run_max_saved_images": str(settings.camera_run_max_saved_images),
+        "llm_model": str(settings.llm_model or ""),
+        "llm_configured": str(bool(settings.llm_api_key and settings.llm_model)),
+        "director_plan_mode": settings.director_plan_mode,
     }
 
 
 @app.post("/director/plan")
 def director_plan(request: DirectorPlanRequest) -> dict:
+    image_path = None
+    run_id = (request.vision_context or {}).get("run_id") if request.vision_context else None
+    if run_id:
+        try:
+            image_path = camera_run_manager.latest_output_path(str(run_id))
+        except CameraRunNotFoundError:
+            image_path = None
     try:
         return generate_director_plan(
             PlannerInput(
                 user_prompt=request.user_prompt,
                 vision_context=request.vision_context,
+                image_path=image_path,
                 max_duration_seconds=request.max_duration_seconds,
             )
         )
@@ -202,6 +230,8 @@ def start_camera_run(request: CameraRunStartRequest) -> dict:
         dynamic_prefix=request.dynamic_prefix,
         face_threshold=request.face_threshold,
         max_saved_images=request.max_saved_images,
+        preview_fps=request.preview_fps,
+        preview_jpeg_quality=request.preview_jpeg_quality,
     )
     try:
         run = camera_run_manager.start_run(config, replace_existing=request.replace_existing)
@@ -240,6 +270,29 @@ def camera_run_latest_image(run_id: str):
     if output_path is None or not output_path.is_file():
         raise HTTPException(status_code=404, detail=f"No output image is available for camera run: {run_id}")
     return FileResponse(path=str(output_path), media_type="image/jpeg", filename=output_path.name)
+
+
+@app.get("/camera/runs/{run_id}/preview.mjpg")
+def camera_run_preview(run_id: str):
+    try:
+        camera_run_manager.get_run(run_id)
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+
+    def stream():
+        for jpeg in camera_run_manager.preview_jpegs(run_id):
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n"
+                b"Cache-Control: no-cache\r\n"
+                b"Content-Length: " + str(len(jpeg)).encode("ascii") + b"\r\n\r\n" + jpeg + b"\r\n"
+            )
+
+    return StreamingResponse(
+        stream(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
 
 
 @app.delete("/camera/runs/{run_id}")

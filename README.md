@@ -33,10 +33,13 @@ http://127.0.0.1:8000/directorx
 To enable LLM-based storyboard planning, configure an OpenAI-compatible chat-completions endpoint in `.env`:
 
 ```powershell
+DIRECTOR_PLAN_MODE=llm
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_API_KEY=your_key_here
 LLM_MODEL=your_model_here
 ```
+
+Set `DIRECTOR_PLAN_MODE=local` to use the built-in rule template instead of calling the LLM.
 
 DirectorX sends the user's shot request plus the latest camera detection / face-recognition context to `POST /director/plan`. The backend validates the returned A1Z keyframes before the frontend converts them into robot move commands.
 

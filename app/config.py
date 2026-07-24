@@ -66,6 +66,13 @@ def _camera_source(name: str, default: str) -> str:
     return value
 
 
+def _director_plan_mode(name: str, default: str) -> str:
+    value = os.getenv(name, default).strip().lower()
+    if value not in {"llm", "local"}:
+        raise ValueError(f"{name} must be 'llm' or 'local'")
+    return value
+
+
 load_env_file()
 
 
@@ -87,6 +94,7 @@ class Settings:
     llm_model: str | None = os.getenv("LLM_MODEL")
     llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.4"))
     llm_timeout_seconds: float = _positive_float("LLM_TIMEOUT_SECONDS", 45.0)
+    director_plan_mode: str = _director_plan_mode("DIRECTOR_PLAN_MODE", "llm")
 
 
 settings = Settings()

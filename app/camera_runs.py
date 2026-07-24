@@ -39,6 +39,8 @@ class CameraRunConfig:
     dynamic_prefix: str = "person"
     face_threshold: float | None = None
     max_saved_images: int = 100
+    preview_fps: int = 10
+    preview_jpeg_quality: int = 80
 
 
 class CameraRunConflictError(RuntimeError):
@@ -76,22 +78,41 @@ class CameraRun:
         self.stopped_at: float | None = None
         self.error: str | None = None
         self.frame_count = 0
+        self.preview_frame_count = 0
+        self.preview_width = config.width
+        self.preview_height = config.height
         self.latest_sample: dict | None = None
         self.frames: deque[dict] = deque(maxlen=history_size)
         self._saved_samples: deque[dict] = deque()
         self._lock = threading.Lock()
+        self._frame_condition = threading.Condition(self._lock)
         self._stop_event = threading.Event()
-        self._thread = threading.Thread(target=self._run, name=f"camera-run-{self.run_id}", daemon=True)
+        self._latest_frame = None
+        self._latest_preview_jpeg: bytes | None = None
+        self._started_monotonic = time.monotonic()
+        self._capture_thread = threading.Thread(
+            target=self._run_capture,
+            name=f"camera-capture-{self.run_id}",
+            daemon=True,
+        )
+        self._analysis_thread = threading.Thread(
+            target=self._run_analysis,
+            name=f"camera-analysis-{self.run_id}",
+            daemon=True,
+        )
 
     def start(self) -> None:
-        self._thread.start()
+        self._capture_thread.start()
+        self._analysis_thread.start()
 
     def stop(self, timeout: float = 5.0) -> dict:
+        self._stop_event.set()
         with self._lock:
             if self.status in {"starting", "running"}:
                 self.status = "stopping"
-        self._stop_event.set()
-        self._thread.join(timeout=timeout)
+            self._frame_condition.notify_all()
+        self._capture_thread.join(timeout=timeout)
+        self._analysis_thread.join(timeout=timeout)
         return self.to_dict()
 
     def to_dict(self) -> dict:
@@ -106,6 +127,9 @@ class CameraRun:
                 "output_dir": str(self.output_dir),
                 "max_saved_images": self.config.max_saved_images,
                 "frame_count": self.frame_count,
+                "preview_frame_count": self.preview_frame_count,
+                "preview_width": self.preview_width,
+                "preview_height": self.preview_height,
                 "started_at": self.started_at,
                 "stopped_at": self.stopped_at,
                 "error": self.error,
@@ -127,7 +151,35 @@ class CameraRun:
         with self._lock:
             return self.status in {"starting", "running", "stopping"}
 
-    def _run(self) -> None:
+    def iter_preview_jpegs(self):
+        last_frame_count = 0
+        while True:
+            with self._frame_condition:
+                self._frame_condition.wait_for(
+                    lambda: (
+                        self._stop_event.is_set()
+                        or self.preview_frame_count != last_frame_count
+                        or self.status == "error"
+                    ),
+                    timeout=1.0,
+                )
+                status = self.status
+                frame_count = self.preview_frame_count
+                jpeg = self._latest_preview_jpeg
+
+            if jpeg is None:
+                if status in {"stopped", "error"} or self._stop_event.is_set():
+                    break
+                continue
+            if frame_count == last_frame_count:
+                if status in {"stopped", "error"} or self._stop_event.is_set():
+                    break
+                continue
+
+            last_frame_count = frame_count
+            yield jpeg
+
+    def _run_capture(self) -> None:
         try:
             self.input_dir.mkdir(parents=True, exist_ok=True)
             self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -142,34 +194,88 @@ class CameraRun:
                 with self._lock:
                     if self.status != "stopping":
                         self.status = "running"
+                    self._frame_condition.notify_all()
 
-                start_time = time.monotonic()
-                frame_number = 1
+                preview_interval = 1.0 / self.config.preview_fps
+                next_frame_at = time.monotonic()
                 while not self._stop_event.is_set():
-                    due_time = start_time + (frame_number - 1) * self.config.interval
-                    sleep_for = due_time - time.monotonic()
+                    sleep_for = next_frame_at - time.monotonic()
                     if sleep_for > 0 and self._stop_event.wait(sleep_for):
                         break
 
                     frame = camera.read()
-                    sample = self._run_sample(
-                        frame=frame,
-                        frame_number=frame_number,
-                        elapsed_seconds=round(time.monotonic() - start_time, 3),
+                    success, encoded = cv2.imencode(
+                        ".jpg",
+                        frame,
+                        [int(cv2.IMWRITE_JPEG_QUALITY), self.config.preview_jpeg_quality],
                     )
-                    with self._lock:
-                        self.frame_count = frame_number
-                        self.latest_sample = sample
-                        self.frames.append(sample)
-                        self._saved_samples.append(sample)
-                    self._prune_saved_images()
-                    frame_number += 1
+                    if not success:
+                        raise RuntimeError("Could not encode preview frame")
+
+                    height, width = frame.shape[:2]
+                    with self._frame_condition:
+                        self.preview_frame_count += 1
+                        self.preview_width = width
+                        self.preview_height = height
+                        self._latest_frame = frame.copy()
+                        self._latest_preview_jpeg = encoded.tobytes()
+                        self._frame_condition.notify_all()
+
+                    next_frame_at += preview_interval
+                    now = time.monotonic()
+                    if next_frame_at < now:
+                        next_frame_at = now + preview_interval
 
             self._mark_done(status="stopped")
         except Exception as exc:
             self._mark_done(status="error", error=str(exc))
 
-    def _run_sample(self, frame, frame_number: int, elapsed_seconds: float) -> dict:
+    def _run_analysis(self) -> None:
+        frame_number = 1
+        while not self._stop_event.is_set():
+            due_time = self._started_monotonic + (frame_number - 1) * self.config.interval
+            sleep_for = due_time - time.monotonic()
+            if sleep_for > 0 and self._stop_event.wait(sleep_for):
+                break
+
+            frame_snapshot = None
+            preview_frame_count = 0
+            with self._frame_condition:
+                self._frame_condition.wait_for(
+                    lambda: self._stop_event.is_set() or self._latest_frame is not None or self.status == "error",
+                    timeout=1.0,
+                )
+                if self._stop_event.is_set() or self.status == "error":
+                    break
+                if self._latest_frame is not None:
+                    frame_snapshot = self._latest_frame.copy()
+                    preview_frame_count = self.preview_frame_count
+
+            if frame_snapshot is None:
+                continue
+
+            try:
+                sample = self._run_sample(
+                    frame=frame_snapshot,
+                    frame_number=frame_number,
+                    elapsed_seconds=round(time.monotonic() - self._started_monotonic, 3),
+                    preview_frame_count=preview_frame_count,
+                )
+            except Exception as exc:
+                self._mark_done(status="error", error=str(exc))
+                break
+
+            with self._lock:
+                if self.status == "error":
+                    break
+                self.frame_count = frame_number
+                self.latest_sample = sample
+                self.frames.append(sample)
+                self._saved_samples.append(sample)
+            self._prune_saved_images()
+            frame_number += 1
+
+    def _run_sample(self, frame, frame_number: int, elapsed_seconds: float, preview_frame_count: int) -> dict:
         image_name = f"{self.run_name}-{frame_number:06d}.jpg"
         input_path = self.input_dir / image_name
         output_path = self.output_dir / image_name
@@ -207,6 +313,7 @@ class CameraRun:
 
         return {
             "index": frame_number,
+            "preview_frame_count": preview_frame_count,
             "elapsed_seconds": elapsed_seconds,
             "input_path": str(input_path),
             "output_path": str(output_path),
@@ -231,15 +338,17 @@ class CameraRun:
                     pass
 
     def _mark_done(self, status: RunStatus, error: str | None = None) -> None:
-        with self._lock:
-            if self.status == "stopping" and status == "stopped":
-                self.status = "stopped"
-            elif self.status != "stopping":
+        if status == "error":
+            self._stop_event.set()
+        with self._frame_condition:
+            if status == "error":
                 self.status = status
-            else:
-                self.status = status
-            self.stopped_at = time.time()
-            self.error = error
+                self.error = error
+            elif self.status != "error":
+                self.status = "stopped" if self.status == "stopping" else status
+            if status in {"stopped", "error"}:
+                self.stopped_at = time.time()
+            self._frame_condition.notify_all()
 
 
 class CameraRunManager:
@@ -308,6 +417,9 @@ class CameraRunManager:
     def latest_output_path(self, run_id: str) -> Path | None:
         return self.get_run(run_id).latest_output_path()
 
+    def preview_jpegs(self, run_id: str):
+        return self.get_run(run_id).iter_preview_jpegs()
+
     def _active_run_for_camera(self, camera_key: tuple[str, int]) -> CameraRun | None:
         for run in self._runs.values():
             if run.camera_key == camera_key and run.is_active():
@@ -348,6 +460,10 @@ def _validate_config(config: CameraRunConfig) -> None:
         raise CameraRunValidationError("dynamic_prefix cannot be empty")
     if config.max_saved_images < 1:
         raise CameraRunValidationError("max_saved_images must be greater than or equal to 1")
+    if config.preview_fps <= 0:
+        raise CameraRunValidationError("preview_fps must be greater than 0")
+    if config.preview_jpeg_quality < 1 or config.preview_jpeg_quality > 100:
+        raise CameraRunValidationError("preview_jpeg_quality must be between 1 and 100")
 
 
 def _clean_run_name(name: str) -> str:
