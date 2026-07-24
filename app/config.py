@@ -94,6 +94,8 @@ class Settings:
     tcp_face_port: int = int(os.getenv("TCP_FACE_PORT", "9000"))
     tcp_face_identity: str = os.getenv("TCP_FACE_IDENTITY", "zhangzhan")
     tcp_face_timeout_seconds: float = _positive_float("TCP_FACE_TIMEOUT_SECONDS", 0.2)
+    tcp_face_send_fps: int = _positive_int("TCP_FACE_SEND_FPS", 10)
+    tcp_face_track_ttl_seconds: float = _positive_float("TCP_FACE_TRACK_TTL_SECONDS", 1.0)
     llm_base_url: str = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
     llm_api_key: str | None = os.getenv("LLM_API_KEY")
     llm_model: str | None = os.getenv("LLM_MODEL")

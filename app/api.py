@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import os
 import tempfile
+import asyncio
 from pathlib import Path
 from typing import Literal
 
 import cv2
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -129,11 +130,15 @@ class CameraRunStartRequest(BaseModel):
     replace_existing: bool = True
     preview_fps: int = 10
     preview_jpeg_quality: int = 80
+    face_interval: float = 1.0
+    box_history_size: int = 1
     tcp_face_enabled: bool = settings.tcp_face_enabled
     tcp_face_host: str = settings.tcp_face_host
     tcp_face_port: int = settings.tcp_face_port
     tcp_face_identity: str = settings.tcp_face_identity
     tcp_face_timeout_seconds: float = settings.tcp_face_timeout_seconds
+    tcp_face_send_fps: int = settings.tcp_face_send_fps
+    tcp_face_track_ttl_seconds: float = settings.tcp_face_track_ttl_seconds
 
 
 class DirectorPlanRequest(BaseModel):
@@ -165,6 +170,8 @@ def director_config() -> dict:
             "tcp_face_port": settings.tcp_face_port,
             "tcp_face_identity": settings.tcp_face_identity,
             "tcp_face_timeout_seconds": settings.tcp_face_timeout_seconds,
+            "tcp_face_send_fps": settings.tcp_face_send_fps,
+            "tcp_face_track_ttl_seconds": settings.tcp_face_track_ttl_seconds,
         },
         "planner": {
             "mode": settings.director_plan_mode,
@@ -242,11 +249,15 @@ def start_camera_run(request: CameraRunStartRequest) -> dict:
         max_saved_images=request.max_saved_images,
         preview_fps=request.preview_fps,
         preview_jpeg_quality=request.preview_jpeg_quality,
+        face_interval=request.face_interval,
+        box_history_size=request.box_history_size,
         tcp_face_enabled=request.tcp_face_enabled,
         tcp_face_host=request.tcp_face_host,
         tcp_face_port=request.tcp_face_port,
         tcp_face_identity=request.tcp_face_identity,
         tcp_face_timeout_seconds=request.tcp_face_timeout_seconds,
+        tcp_face_send_fps=request.tcp_face_send_fps,
+        tcp_face_track_ttl_seconds=request.tcp_face_track_ttl_seconds,
     )
     try:
         run = camera_run_manager.start_run(config, replace_existing=request.replace_existing)
@@ -308,6 +319,44 @@ def camera_run_preview(run_id: str):
         media_type="multipart/x-mixed-replace; boundary=frame",
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
     )
+
+
+@app.websocket("/camera/runs/{run_id}/boxes.ws")
+async def camera_run_boxes(websocket: WebSocket, run_id: str):
+    await websocket.accept()
+    try:
+        camera_run_manager.get_run(run_id)
+    except CameraRunNotFoundError:
+        await websocket.send_json(
+            {
+                "type": "vision_boxes",
+                "run_id": run_id,
+                "status": "error",
+                "error": f"Unknown camera run: {run_id}",
+                "objects": [],
+                "faces": [],
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
+    sentinel = object()
+    events = camera_run_manager.box_events(run_id)
+    try:
+        while True:
+            payload = await asyncio.to_thread(next, events, sentinel)
+            if payload is sentinel:
+                break
+            await websocket.send_json(payload)
+            if payload.get("status") in {"stopped", "error"}:
+                break
+    except WebSocketDisconnect:
+        return
+    finally:
+        try:
+            await websocket.close()
+        except RuntimeError:
+            pass
 
 
 @app.delete("/camera/runs/{run_id}")

@@ -18,7 +18,6 @@ from app.tcp_sender import (
     TcpJsonLineClient,
     TcpTarget,
     build_face_status_tcp_payload,
-    build_face_tcp_payload,
 )
 from app.vision import run_yolo_detection
 
@@ -57,11 +56,15 @@ class CameraRunConfig:
     max_saved_images: int = 100
     preview_fps: int = 10
     preview_jpeg_quality: int = 80
+    face_interval: float = 1.0
+    box_history_size: int = 1
     tcp_face_enabled: bool = False
     tcp_face_host: str = "192.168.1.101"
     tcp_face_port: int = 9000
     tcp_face_identity: str = "zhangzhan"
     tcp_face_timeout_seconds: float = 0.2
+    tcp_face_send_fps: int = 10
+    tcp_face_track_ttl_seconds: float = 1.0
 
 
 class CameraRunConflictError(RuntimeError):
@@ -107,10 +110,22 @@ class CameraRun:
         self._saved_samples: deque[dict] = deque()
         self._lock = threading.Lock()
         self._frame_condition = threading.Condition(self._lock)
+        self._box_condition = threading.Condition(self._lock)
         self._stop_event = threading.Event()
         self._latest_frame = None
         self._latest_preview_jpeg: bytes | None = None
+        self._box_payloads: deque[dict] = deque(maxlen=config.box_history_size)
+        self._latest_box_payload: dict | None = None
+        self._box_event_count = 0
+        self._latest_face_result: dict | None = None
+        self._latest_face_matches: list = []
+        self._last_face_at: float | None = None
         self._tcp_face_client: TcpJsonLineClient | None = None
+        self._tcp_face_box: tuple[int, int, int, int] | None = None
+        self._tcp_face_template = None
+        self._tcp_face_found = False
+        self._tcp_face_last_seen_at: float | None = None
+        self._tcp_face_last_send: dict | None = None
         self._started_monotonic = time.monotonic()
         self._capture_thread = threading.Thread(
             target=self._run_capture,
@@ -122,10 +137,17 @@ class CameraRun:
             name=f"camera-analysis-{self.run_id}",
             daemon=True,
         )
+        self._tcp_face_thread = threading.Thread(
+            target=self._run_tcp_face_sender,
+            name=f"camera-tcp-face-{self.run_id}",
+            daemon=True,
+        )
 
     def start(self) -> None:
         self._capture_thread.start()
         self._analysis_thread.start()
+        if self.config.tcp_face_enabled:
+            self._tcp_face_thread.start()
 
     def stop(self, timeout: float = 5.0) -> dict:
         self._stop_event.set()
@@ -133,8 +155,11 @@ class CameraRun:
             if self.status in {"starting", "running"}:
                 self.status = "stopping"
             self._frame_condition.notify_all()
+            self._box_condition.notify_all()
         self._capture_thread.join(timeout=timeout)
         self._analysis_thread.join(timeout=timeout)
+        if self.config.tcp_face_enabled:
+            self._tcp_face_thread.join(timeout=timeout)
         return self.to_dict()
 
     def to_dict(self) -> dict:
@@ -200,6 +225,28 @@ class CameraRun:
 
             last_frame_count = frame_count
             yield jpeg
+
+    def iter_box_events(self):
+        last_event_count = 0
+        while True:
+            with self._box_condition:
+                self._box_condition.wait_for(
+                    lambda: (
+                        self._stop_event.is_set()
+                        or self._box_event_count != last_event_count
+                        or self.status in {"stopped", "error"}
+                    ),
+                    timeout=1.0,
+                )
+                status = self.status
+                event_count = self._box_event_count
+                payload = self._latest_box_payload
+
+            if payload is not None and event_count != last_event_count:
+                last_event_count = event_count
+                yield payload
+            if status in {"stopped", "error"} or self._stop_event.is_set():
+                break
 
     def _run_capture(self) -> None:
         try:
@@ -277,30 +324,49 @@ class CameraRun:
                 if frame_snapshot is None:
                     continue
 
+                now = time.monotonic()
+                with self._lock:
+                    run_face_recognition = (
+                        self.config.recognize_faces
+                        and (
+                            self._last_face_at is None
+                            or now - self._last_face_at >= self.config.face_interval
+                        )
+                    )
+
                 try:
                     sample = self._run_sample(
                         frame=frame_snapshot,
                         frame_number=frame_number,
                         elapsed_seconds=round(time.monotonic() - self._started_monotonic, 3),
                         preview_frame_count=preview_frame_count,
+                        run_face_recognition=run_face_recognition,
                     )
                 except Exception as exc:
                     self._mark_done(status="error", error=str(exc))
                     break
 
-                with self._lock:
+                with self._box_condition:
                     if self.status == "error":
                         break
                     self.frame_count = frame_number
                     self.latest_sample = sample
                     self.frames.append(sample)
                     self._saved_samples.append(sample)
+                    self._publish_box_payload_locked(sample=sample)
                 self._prune_saved_images()
                 frame_number += 1
         finally:
-            self._close_tcp_face_client()
+            pass
 
-    def _run_sample(self, frame, frame_number: int, elapsed_seconds: float, preview_frame_count: int) -> dict:
+    def _run_sample(
+        self,
+        frame,
+        frame_number: int,
+        elapsed_seconds: float,
+        preview_frame_count: int,
+        run_face_recognition: bool,
+    ) -> dict:
         image_name = f"{self.run_name}-{frame_number:06d}.jpg"
         input_path = self.input_dir / image_name
         output_path = self.output_dir / image_name
@@ -319,7 +385,7 @@ class CameraRun:
         face_result = None
         face_matches: Iterable = []
         recognition_result = None
-        if self.config.recognize_faces:
+        if self.config.recognize_faces and run_face_recognition:
             recognition_result = self.face_service.recognize_registered_identities(
                 image=frame,
                 threshold=self.config.face_threshold,
@@ -329,8 +395,19 @@ class CameraRun:
                 dynamic_prefix=self.config.dynamic_prefix,
             )
             face_result = recognition_result_to_dict(recognition_result)
-            face_matches = recognition_result.matches
-        tcp_face_result = self._send_tcp_face_result(recognition_result, frame_number)
+            face_matches = list(recognition_result.matches)
+            with self._lock:
+                self._latest_face_result = face_result
+                self._latest_face_matches = list(face_matches)
+                self._last_face_at = time.monotonic()
+        elif self.config.recognize_faces:
+            with self._lock:
+                face_result = self._latest_face_result
+                face_matches = list(self._latest_face_matches)
+        tcp_face_result = self._update_tcp_face_tracking(
+            recognition_result=recognition_result,
+            frame=frame,
+        )
 
         annotated = draw_detections(frame, vision_result.detections_for_output)
         if self.config.recognize_faces:
@@ -349,64 +426,165 @@ class CameraRun:
             "tcp_face": tcp_face_result,
         }
 
-    def _send_tcp_face_result(self, recognition_result, frame_number: int) -> dict | None:
+    def _publish_box_payload_locked(self, sample: dict | None = None) -> None:
+        self._latest_box_payload = self._build_box_payload(sample=sample or self.latest_sample, status=self.status)
+        self._box_payloads.append(self._latest_box_payload)
+        self._box_event_count += 1
+        self._box_condition.notify_all()
+
+    def _build_box_payload(self, sample: dict | None, status: str) -> dict:
+        face_recognition = (sample or {}).get("face_recognition") or {}
+        return {
+            "type": "vision_boxes",
+            "run_id": self.run_id,
+            "status": status,
+            "frame_count": self.frame_count,
+            "preview_frame_count": self.preview_frame_count,
+            "width": self.preview_width,
+            "height": self.preview_height,
+            "objects": _normalize_box_objects((sample or {}).get("results") or []),
+            "faces": _normalize_box_faces(face_recognition.get("matches") or []),
+            "error": self.error,
+        }
+
+    def _update_tcp_face_tracking(self, recognition_result, frame) -> dict | None:
         if not self.config.tcp_face_enabled:
             return None
 
         identity = self.config.tcp_face_identity.strip()
         if not identity:
-            return {"enabled": True, "sent": False, "error": "tcp_face_identity is empty"}
+            return {"enabled": True, "found": False, "error": "tcp_face_identity is empty"}
 
         match = None
         if recognition_result is not None:
             match = next((candidate for candidate in recognition_result.matches if candidate.identity == identity), None)
 
-        payload = (
-            build_face_tcp_payload(
-                match=match,
-                sequence=frame_number,
-                camera_source=self.config.camera_source,
-                camera_index=self.config.camera_index,
-            )
-            if match is not None
-            else build_face_status_tcp_payload(identity=identity, found=False, box=None)
-        )
+        now = time.monotonic()
+        match_box = match.box if match is not None and match.found and match.box is not None else None
+        match_template = _crop_gray(frame, match_box) if match_box is not None else None
 
-        try:
-            self._tcp_face().send(payload)
-            tcp_face_logger.info(
-                "sent target=%s:%s identity=%s found=%s box=%s",
-                self.config.tcp_face_host,
-                self.config.tcp_face_port,
-                identity,
-                payload["found"],
-                payload["box"],
-            )
+        with self._lock:
+            if match_box is not None:
+                self._tcp_face_box = match_box
+                self._tcp_face_template = match_template
+                self._tcp_face_found = True
+                self._tcp_face_last_seen_at = now
+
+            current_box = self._tcp_face_box
+            current_template = self._tcp_face_template
+
+        tracked_box = self._track_tcp_face_box(frame, current_box, current_template)
+        tracked_template = _crop_gray(frame, tracked_box) if tracked_box is not None else None
+
+        with self._lock:
+            if tracked_box is not None:
+                self._tcp_face_box = tracked_box
+                if tracked_template is not None:
+                    self._tcp_face_template = tracked_template
+                self._tcp_face_found = True
+                self._tcp_face_last_seen_at = now
+
+            if self._tcp_face_last_seen_at is not None and now - self._tcp_face_last_seen_at > self.config.tcp_face_track_ttl_seconds:
+                self._tcp_face_found = False
+                self._tcp_face_box = None
+                self._tcp_face_template = None
+
+            found = self._tcp_face_found and self._tcp_face_box is not None
             return {
                 "enabled": True,
-                "sent": True,
                 "identity": identity,
-                "found": payload["found"],
+                "found": found,
+                "box": self._tcp_face_box if found else None,
                 "error": None,
             }
-        except OSError as exc:
+
+    def _track_tcp_face_box(self, frame, current_box, template) -> tuple[int, int, int, int] | None:
+        if current_box is None or template is None or template.size == 0:
+            return None
+
+        height, width = frame.shape[:2]
+        x1, y1, x2, y2 = current_box
+        box_width = max(1, x2 - x1)
+        box_height = max(1, y2 - y1)
+        search_margin_x = int(box_width * 1.5)
+        search_margin_y = int(box_height * 1.5)
+        search_box = (
+            max(0, x1 - search_margin_x),
+            max(0, y1 - search_margin_y),
+            min(width, x2 + search_margin_x),
+            min(height, y2 + search_margin_y),
+        )
+        search = _crop_gray(frame, search_box)
+        if search is None or search.size == 0:
+            return None
+        if search.shape[0] < template.shape[0] or search.shape[1] < template.shape[1]:
+            return None
+
+        result = cv2.matchTemplate(search, template, cv2.TM_CCOEFF_NORMED)
+        _, max_value, _, max_location = cv2.minMaxLoc(result)
+        if max_value < 0.45:
+            return None
+
+        search_x1, search_y1, _, _ = search_box
+        new_x1 = search_x1 + max_location[0]
+        new_y1 = search_y1 + max_location[1]
+        new_x2 = min(width - 1, new_x1 + template.shape[1])
+        new_y2 = min(height - 1, new_y1 + template.shape[0])
+        return (new_x1, new_y1, new_x2, new_y2)
+
+    def _run_tcp_face_sender(self) -> None:
+        identity = self.config.tcp_face_identity.strip()
+        interval = 1.0 / self.config.tcp_face_send_fps
+        next_send_at = time.monotonic()
+
+        try:
+            while not self._stop_event.is_set():
+                sleep_for = next_send_at - time.monotonic()
+                if sleep_for > 0 and self._stop_event.wait(sleep_for):
+                    break
+
+                with self._lock:
+                    now = time.monotonic()
+                    if self._tcp_face_last_seen_at is not None and now - self._tcp_face_last_seen_at > self.config.tcp_face_track_ttl_seconds:
+                        self._tcp_face_found = False
+                        self._tcp_face_box = None
+                        self._tcp_face_template = None
+                    found = self._tcp_face_found and self._tcp_face_box is not None
+                    box = self._tcp_face_box if found else None
+
+                payload = build_face_status_tcp_payload(identity=identity, found=found, box=box)
+                try:
+                    self._tcp_face().send(payload)
+                    with self._lock:
+                        self._tcp_face_last_send = {"sent": True, "identity": identity, "found": found, "error": None}
+                    tcp_face_logger.info(
+                        "sent target=%s:%s identity=%s found=%s box=%s",
+                        self.config.tcp_face_host,
+                        self.config.tcp_face_port,
+                        identity,
+                        payload["found"],
+                        payload["box"],
+                    )
+                except OSError as exc:
+                    self._close_tcp_face_client()
+                    with self._lock:
+                        self._tcp_face_last_send = {"sent": False, "identity": identity, "found": found, "error": str(exc)}
+                    tcp_face_logger.warning(
+                        "failed target=%s:%s identity=%s found=%s box=%s error=%s",
+                        self.config.tcp_face_host,
+                        self.config.tcp_face_port,
+                        identity,
+                        payload["found"],
+                        payload["box"],
+                        exc,
+                    )
+
+                next_send_at += interval
+                now = time.monotonic()
+                if next_send_at < now:
+                    next_send_at = now + interval
+        finally:
             self._close_tcp_face_client()
-            tcp_face_logger.warning(
-                "failed target=%s:%s identity=%s found=%s box=%s error=%s",
-                self.config.tcp_face_host,
-                self.config.tcp_face_port,
-                identity,
-                payload["found"],
-                payload["box"],
-                exc,
-            )
-            return {
-                "enabled": True,
-                "sent": False,
-                "identity": identity,
-                "found": payload["found"],
-                "error": str(exc),
-            }
 
     def _tcp_face(self) -> TcpJsonLineClient:
         if self._tcp_face_client is None:
@@ -452,7 +630,9 @@ class CameraRun:
                 self.status = "stopped" if self.status == "stopping" else status
             if status in {"stopped", "error"}:
                 self.stopped_at = time.time()
+            self._publish_box_payload_locked(sample=self.latest_sample)
             self._frame_condition.notify_all()
+            self._box_condition.notify_all()
 
 
 class CameraRunManager:
@@ -524,6 +704,9 @@ class CameraRunManager:
     def preview_jpegs(self, run_id: str):
         return self.get_run(run_id).iter_preview_jpegs()
 
+    def box_events(self, run_id: str):
+        return self.get_run(run_id).iter_box_events()
+
     def _active_run_for_camera(self, camera_key: tuple[str, int]) -> CameraRun | None:
         for run in self._runs.values():
             if run.camera_key == camera_key and run.is_active():
@@ -571,12 +754,110 @@ def _validate_config(config: CameraRunConfig) -> None:
             raise CameraRunValidationError("tcp_face_identity cannot be empty")
         if config.tcp_face_timeout_seconds <= 0:
             raise CameraRunValidationError("tcp_face_timeout_seconds must be greater than 0")
+        if config.tcp_face_send_fps <= 0:
+            raise CameraRunValidationError("tcp_face_send_fps must be greater than 0")
+        if config.tcp_face_track_ttl_seconds <= 0:
+            raise CameraRunValidationError("tcp_face_track_ttl_seconds must be greater than 0")
     if config.max_saved_images < 1:
         raise CameraRunValidationError("max_saved_images must be greater than or equal to 1")
     if config.preview_fps <= 0:
         raise CameraRunValidationError("preview_fps must be greater than 0")
     if config.preview_jpeg_quality < 1 or config.preview_jpeg_quality > 100:
         raise CameraRunValidationError("preview_jpeg_quality must be between 1 and 100")
+    if config.face_interval <= 0:
+        raise CameraRunValidationError("face_interval must be greater than 0")
+    if config.box_history_size < 1:
+        raise CameraRunValidationError("box_history_size must be greater than or equal to 1")
+
+
+def _normalize_box_objects(results: Iterable[dict]) -> list[dict]:
+    objects = []
+    for item in results:
+        detection = item.get("detection") if isinstance(item, dict) and item.get("detection") else item
+        if not isinstance(detection, dict):
+            continue
+        label = detection.get("label") or detection.get("object_name")
+        box = detection.get("box")
+        if not label or not isinstance(box, (list, tuple)) or len(box) != 4:
+            continue
+        objects.append(
+            {
+                "label": label,
+                "confidence": detection.get("confidence"),
+                "box": [int(round(float(value))) for value in box],
+            }
+        )
+    return objects
+
+
+def _normalize_box_faces(matches: Iterable[dict]) -> list[dict]:
+    faces = []
+    for match in matches:
+        if not isinstance(match, dict) or match.get("found") is False:
+            continue
+        box = match.get("box")
+        if not isinstance(box, (list, tuple)) or len(box) != 4:
+            continue
+        faces.append(
+            {
+                "identity": match.get("identity") or "unknown",
+                "similarity": match.get("similarity"),
+                "library": match.get("library") or match.get("source_library") or match.get("source") or "unknown",
+                "box": [int(round(float(value))) for value in box],
+            }
+        )
+    return faces
+
+
+def _box_center(box: tuple[int, int, int, int]) -> tuple[float, float]:
+    x1, y1, x2, y2 = box
+    return ((x1 + x2) / 2, (y1 + y2) / 2)
+
+
+def _point_in_box(point: tuple[float, float], box: tuple[int, int, int, int]) -> bool:
+    x, y = point
+    x1, y1, x2, y2 = box
+    return x1 <= x <= x2 and y1 <= y <= y2
+
+
+def _box_iou(left: tuple[int, int, int, int], right: tuple[int, int, int, int]) -> float:
+    left_x1, left_y1, left_x2, left_y2 = left
+    right_x1, right_y1, right_x2, right_y2 = right
+    inter_x1 = max(left_x1, right_x1)
+    inter_y1 = max(left_y1, right_y1)
+    inter_x2 = min(left_x2, right_x2)
+    inter_y2 = min(left_y2, right_y2)
+    inter_area = max(0, inter_x2 - inter_x1) * max(0, inter_y2 - inter_y1)
+    if inter_area == 0:
+        return 0.0
+    left_area = max(0, left_x2 - left_x1) * max(0, left_y2 - left_y1)
+    right_area = max(0, right_x2 - right_x1) * max(0, right_y2 - right_y1)
+    union_area = left_area + right_area - inter_area
+    return inter_area / union_area if union_area > 0 else 0.0
+
+
+def _center_distance_ratio(left: tuple[int, int, int, int], right: tuple[int, int, int, int]) -> float:
+    left_center_x, left_center_y = _box_center(left)
+    right_center_x, right_center_y = _box_center(right)
+    left_x1, left_y1, left_x2, left_y2 = left
+    scale = max(1.0, ((left_x2 - left_x1) ** 2 + (left_y2 - left_y1) ** 2) ** 0.5)
+    distance = ((left_center_x - right_center_x) ** 2 + (left_center_y - right_center_y) ** 2) ** 0.5
+    return distance / scale
+
+
+def _crop_gray(frame, box: tuple[int, int, int, int]):
+    height, width = frame.shape[:2]
+    x1, y1, x2, y2 = box
+    x1 = max(0, min(width - 1, x1))
+    y1 = max(0, min(height - 1, y1))
+    x2 = max(0, min(width, x2))
+    y2 = max(0, min(height, y2))
+    if x2 <= x1 or y2 <= y1:
+        return None
+    crop = frame[y1:y2, x1:x2]
+    if crop.size == 0:
+        return None
+    return cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
 
 def _clean_run_name(name: str) -> str:
