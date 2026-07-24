@@ -226,13 +226,18 @@ def _validate_plan(plan: dict[str, Any], max_duration_seconds: float) -> dict[st
             if not math.isfinite(t_value):
                 raise DirectorPlannerError("Keyframe time must be finite")
             if validated_keyframes and t_value < validated_keyframes[-1][1]:
-                raise DirectorPlannerError("Keyframe times must be non-decreasing inside a shot")
+                t_value = validated_keyframes[-1][1] + 0.8
             validated_keyframes.append([q_validated, round(t_value, 3)])
 
         if shot_index == 0 and validated_keyframes[0][1] != 0:
-            validated_keyframes[0][1] = 0.0
+            offset = validated_keyframes[0][1]
+            validated_keyframes = [[q, round(max(0.0, t - offset), 3)] for q, t in validated_keyframes]
         if validated_keyframes[0][1] < last_time - 0.001:
-            raise DirectorPlannerError("Shot timeline moved backwards")
+            offset = last_time - validated_keyframes[0][1]
+            validated_keyframes = [[q, round(t + offset, 3)] for q, t in validated_keyframes]
+        elif shot_index > 0 and validated_keyframes[0][1] > last_time + 0.001:
+            previous_pose = validated_shots[-1]["keyframes"][-1][0]
+            validated_keyframes.insert(0, [previous_pose, round(last_time, 3)])
 
         t0 = validated_keyframes[0][1]
         t1 = validated_keyframes[-1][1]

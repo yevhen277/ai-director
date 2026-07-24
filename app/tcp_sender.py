@@ -26,13 +26,12 @@ class TcpJsonLineClient:
         data = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
         last_error: OSError | None = None
 
-        for _ in range(2):
-            try:
-                self._connect().sendall(data)
-                return
-            except OSError as exc:
-                last_error = exc
-                self.close()
+        try:
+            self._connect().sendall(data)
+            return
+        except OSError as exc:
+            last_error = exc
+            self.close()
 
         raise ConnectionError(f"Could not send TCP payload to {self.target.host}:{self.target.port}") from last_error
 

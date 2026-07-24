@@ -120,12 +120,15 @@ class CameraRun:
         self._latest_face_result: dict | None = None
         self._latest_face_matches: list = []
         self._last_face_at: float | None = None
+        self._latest_tcp_face_result: dict | None = None
         self._tcp_face_client: TcpJsonLineClient | None = None
         self._tcp_face_box: tuple[int, int, int, int] | None = None
         self._tcp_face_template = None
         self._tcp_face_found = False
         self._tcp_face_last_seen_at: float | None = None
         self._tcp_face_last_send: dict | None = None
+        self._last_tcp_face_warning_at = 0.0
+        self._tcp_face_warning_count = 0
         self._started_monotonic = time.monotonic()
         self._capture_thread = threading.Thread(
             target=self._run_capture,
@@ -137,6 +140,11 @@ class CameraRun:
             name=f"camera-analysis-{self.run_id}",
             daemon=True,
         )
+        self._face_thread = threading.Thread(
+            target=self._run_face_recognition,
+            name=f"camera-face-{self.run_id}",
+            daemon=True,
+        )
         self._tcp_face_thread = threading.Thread(
             target=self._run_tcp_face_sender,
             name=f"camera-tcp-face-{self.run_id}",
@@ -146,6 +154,8 @@ class CameraRun:
     def start(self) -> None:
         self._capture_thread.start()
         self._analysis_thread.start()
+        if self.config.recognize_faces:
+            self._face_thread.start()
         if self.config.tcp_face_enabled:
             self._tcp_face_thread.start()
 
@@ -158,6 +168,8 @@ class CameraRun:
             self._box_condition.notify_all()
         self._capture_thread.join(timeout=timeout)
         self._analysis_thread.join(timeout=timeout)
+        if self.config.recognize_faces:
+            self._face_thread.join(timeout=timeout)
         if self.config.tcp_face_enabled:
             self._tcp_face_thread.join(timeout=timeout)
         return self.to_dict()
@@ -324,23 +336,12 @@ class CameraRun:
                 if frame_snapshot is None:
                     continue
 
-                now = time.monotonic()
-                with self._lock:
-                    run_face_recognition = (
-                        self.config.recognize_faces
-                        and (
-                            self._last_face_at is None
-                            or now - self._last_face_at >= self.config.face_interval
-                        )
-                    )
-
                 try:
                     sample = self._run_sample(
                         frame=frame_snapshot,
                         frame_number=frame_number,
                         elapsed_seconds=round(time.monotonic() - self._started_monotonic, 3),
                         preview_frame_count=preview_frame_count,
-                        run_face_recognition=run_face_recognition,
                     )
                 except Exception as exc:
                     self._mark_done(status="error", error=str(exc))
@@ -365,7 +366,6 @@ class CameraRun:
         frame_number: int,
         elapsed_seconds: float,
         preview_frame_count: int,
-        run_face_recognition: bool,
     ) -> dict:
         image_name = f"{self.run_name}-{frame_number:06d}.jpg"
         input_path = self.input_dir / image_name
@@ -384,30 +384,12 @@ class CameraRun:
 
         face_result = None
         face_matches: Iterable = []
-        recognition_result = None
-        if self.config.recognize_faces and run_face_recognition:
-            recognition_result = self.face_service.recognize_registered_identities(
-                image=frame,
-                threshold=self.config.face_threshold,
-                include_fixed=self.config.include_fixed,
-                include_dynamic=self.config.include_dynamic,
-                auto_register_dynamic=self.config.auto_register_dynamic,
-                dynamic_prefix=self.config.dynamic_prefix,
-            )
-            face_result = recognition_result_to_dict(recognition_result)
-            face_matches = list(recognition_result.matches)
-            with self._lock:
-                self._latest_face_result = face_result
-                self._latest_face_matches = list(face_matches)
-                self._last_face_at = time.monotonic()
-        elif self.config.recognize_faces:
+        tcp_face_result = None
+        if self.config.recognize_faces:
             with self._lock:
                 face_result = self._latest_face_result
                 face_matches = list(self._latest_face_matches)
-        tcp_face_result = self._update_tcp_face_tracking(
-            recognition_result=recognition_result,
-            frame=frame,
-        )
+                tcp_face_result = self._latest_tcp_face_result
 
         annotated = draw_detections(frame, vision_result.detections_for_output)
         if self.config.recognize_faces:
@@ -425,6 +407,64 @@ class CameraRun:
             "face_recognition": face_result,
             "tcp_face": tcp_face_result,
         }
+
+    def _run_face_recognition(self) -> None:
+        next_face_at = self._started_monotonic
+        while not self._stop_event.is_set():
+            sleep_for = next_face_at - time.monotonic()
+            if sleep_for > 0 and self._stop_event.wait(sleep_for):
+                break
+
+            frame_snapshot = None
+            with self._frame_condition:
+                self._frame_condition.wait_for(
+                    lambda: self._stop_event.is_set() or self._latest_frame is not None or self.status == "error",
+                    timeout=1.0,
+                )
+                if self._stop_event.is_set() or self.status == "error":
+                    break
+                if self._latest_frame is not None:
+                    frame_snapshot = self._latest_frame.copy()
+
+            if frame_snapshot is None:
+                next_face_at = time.monotonic() + self.config.face_interval
+                continue
+
+            try:
+                recognition_result = self.face_service.recognize_registered_identities(
+                    image=frame_snapshot,
+                    threshold=self.config.face_threshold,
+                    include_fixed=self.config.include_fixed,
+                    include_dynamic=self.config.include_dynamic,
+                    auto_register_dynamic=self.config.auto_register_dynamic,
+                    dynamic_prefix=self.config.dynamic_prefix,
+                )
+                face_result = recognition_result_to_dict(recognition_result)
+                face_matches = list(recognition_result.matches)
+                tcp_face_result = self._update_tcp_face_tracking(
+                    recognition_result=recognition_result,
+                    frame=frame_snapshot,
+                )
+            except Exception as exc:
+                self._mark_done(status="error", error=str(exc))
+                break
+
+            with self._box_condition:
+                if self.status == "error":
+                    break
+                self._latest_face_result = face_result
+                self._latest_face_matches = face_matches
+                self._latest_tcp_face_result = tcp_face_result
+                self._last_face_at = time.monotonic()
+                if self.latest_sample is not None:
+                    self.latest_sample["face_recognition"] = face_result
+                    self.latest_sample["tcp_face"] = tcp_face_result
+                self._publish_box_payload_locked(sample=self.latest_sample)
+
+            next_face_at += self.config.face_interval
+            now = time.monotonic()
+            if next_face_at < now:
+                next_face_at = now + self.config.face_interval
 
     def _publish_box_payload_locked(self, sample: dict | None = None) -> None:
         self._latest_box_payload = self._build_box_payload(sample=sample or self.latest_sample, status=self.status)
@@ -569,15 +609,21 @@ class CameraRun:
                     self._close_tcp_face_client()
                     with self._lock:
                         self._tcp_face_last_send = {"sent": False, "identity": identity, "found": found, "error": str(exc)}
-                    tcp_face_logger.warning(
-                        "failed target=%s:%s identity=%s found=%s box=%s error=%s",
-                        self.config.tcp_face_host,
-                        self.config.tcp_face_port,
-                        identity,
-                        payload["found"],
-                        payload["box"],
-                        exc,
-                    )
+                    self._tcp_face_warning_count += 1
+                    if time.monotonic() - self._last_tcp_face_warning_at >= 1.0:
+                        warning_count = self._tcp_face_warning_count
+                        self._tcp_face_warning_count = 0
+                        self._last_tcp_face_warning_at = time.monotonic()
+                        tcp_face_logger.warning(
+                            "failed target=%s:%s attempts=%s identity=%s found=%s box=%s error=%s",
+                            self.config.tcp_face_host,
+                            self.config.tcp_face_port,
+                            warning_count,
+                            identity,
+                            payload["found"],
+                            payload["box"],
+                            exc,
+                        )
 
                 next_send_at += interval
                 now = time.monotonic()
@@ -588,11 +634,15 @@ class CameraRun:
 
     def _tcp_face(self) -> TcpJsonLineClient:
         if self._tcp_face_client is None:
+            timeout_seconds = min(
+                self.config.tcp_face_timeout_seconds,
+                max(0.01, 0.5 / self.config.tcp_face_send_fps),
+            )
             self._tcp_face_client = TcpJsonLineClient(
                 TcpTarget(
                     host=self.config.tcp_face_host,
                     port=self.config.tcp_face_port,
-                    timeout_seconds=self.config.tcp_face_timeout_seconds,
+                    timeout_seconds=timeout_seconds,
                 )
             )
         return self._tcp_face_client

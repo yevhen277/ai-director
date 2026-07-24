@@ -27,7 +27,7 @@ cd D:\MyDocument\Download\director111
 启动 API 服务：
 
 ```powershell
-uvicorn app.api:app --host 127.0.0.1 --port 8000
+uvicorn app.api:app --host 0.0.0.0 --port 8000
 ```
 
 这个窗口不要关。后面再打开一个新的 PowerShell 窗口执行接口命令。
