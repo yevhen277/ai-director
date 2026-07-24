@@ -47,3 +47,5 @@ desktop.ini
 .idea/
 
 images/
+.env
+Log/

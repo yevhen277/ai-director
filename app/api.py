@@ -16,8 +16,10 @@ from app.face_recognition import (
     FaceRecognitionService,
     candidate_to_dict,
     draw_face_match,
+    draw_face_matches,
     draw_faces,
     match_to_dict,
+    recognition_result_to_dict,
     registered_to_dict,
 )
 from app.labels import resolve_target_classes
@@ -66,6 +68,22 @@ class FaceRegisterRequest(BaseModel):
     face_id: str
     threshold: float = settings.face_threshold
     source_image: str | None = None
+
+
+class CameraFaceRecognizeRequest(BaseModel):
+    camera_source: Literal["orbbec", "opencv"] = "orbbec"
+    camera_index: int = 0
+    width: int = 1280
+    height: int = 720
+    fps: int = 30
+    warmup: int = 5
+    threshold: float | None = None
+    include_fixed: bool = True
+    include_dynamic: bool = True
+    auto_register_dynamic: bool = False
+    dynamic_prefix: str = "person"
+    annotate: bool = True
+    output_name: str | None = None
 
 
 @app.get("/health")
@@ -238,9 +256,63 @@ async def recognize_face(
     return result
 
 
+@app.post("/faces/recognize/all")
+async def recognize_all_faces(
+    threshold: float | None = Form(None),
+    include_fixed: bool = Form(True),
+    include_dynamic: bool = Form(True),
+    auto_register_dynamic: bool = Form(False),
+    dynamic_prefix: str = Form("person"),
+    annotate: bool = Form(False),
+    output_name: str | None = Form(None),
+    file: UploadFile = File(...),
+) -> dict:
+    image = await _read_upload(file)
+    return _recognize_registered_faces(
+        image=image,
+        threshold=threshold,
+        include_fixed=include_fixed,
+        include_dynamic=include_dynamic,
+        auto_register_dynamic=auto_register_dynamic,
+        dynamic_prefix=dynamic_prefix,
+        annotate=annotate,
+        output_name=output_name or _default_output_name(file.filename, "recognized_faces"),
+    )
+
+
+@app.post("/faces/recognize/camera")
+def recognize_all_faces_from_camera(request: CameraFaceRecognizeRequest) -> dict:
+    frame = _read_camera_frame(
+        camera_source=request.camera_source,
+        camera_index=request.camera_index,
+        width=request.width,
+        height=request.height,
+        fps=request.fps,
+        warmup=request.warmup,
+    )
+    return _recognize_registered_faces(
+        image=frame,
+        threshold=request.threshold,
+        include_fixed=request.include_fixed,
+        include_dynamic=request.include_dynamic,
+        auto_register_dynamic=request.auto_register_dynamic,
+        dynamic_prefix=request.dynamic_prefix,
+        annotate=request.annotate,
+        output_name=request.output_name or f"{request.camera_source}_recognized_faces.jpg",
+    )
+
+
 @app.get("/faces/identities")
 def face_identities() -> dict:
-    return {"identities": face_service.identities()}
+    return {
+        "fixed": face_service.identities(),
+        "dynamic": face_service.dynamic_identities(),
+    }
+
+
+@app.delete("/faces/dynamic/identities")
+def clear_dynamic_face_identities() -> dict:
+    return {"cleared": face_service.clear_dynamic_identities()}
 
 
 async def _read_upload(file: UploadFile):
@@ -284,6 +356,38 @@ def _write_output_image(image, output_name: str) -> str:
     if not cv2.imwrite(str(output_path), image):
         raise HTTPException(status_code=500, detail=f"Could not write output image: {output_path}")
     return str(output_path)
+
+
+def _recognize_registered_faces(
+    image,
+    threshold: float | None,
+    include_fixed: bool,
+    include_dynamic: bool,
+    auto_register_dynamic: bool,
+    dynamic_prefix: str,
+    annotate: bool,
+    output_name: str,
+) -> dict:
+    try:
+        recognition_result = face_service.recognize_registered_identities(
+            image=image,
+            threshold=threshold,
+            include_fixed=include_fixed,
+            include_dynamic=include_dynamic,
+            auto_register_dynamic=auto_register_dynamic,
+            dynamic_prefix=dynamic_prefix,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    result = recognition_result_to_dict(recognition_result)
+    result["output_path"] = None
+    if annotate:
+        result["output_path"] = _write_output_image(
+            draw_face_matches(image, recognition_result.matches),
+            output_name,
+        )
+    return result
 
 
 def _default_output_name(filename: str | None, suffix: str) -> str:

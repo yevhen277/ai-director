@@ -78,7 +78,12 @@ curl -X POST http://127.0.0.1:8000/robot/detect/camera -H "Content-Type: applica
 
 ## Face Recognition API
 
-The face recognition flow supports on-scene identity binding for a future web UI. It uses InsightFace `buffalo_l` by default and stores temporary identities in `data/face_registry.json`.
+The face recognition flow supports two identity libraries:
+
+- Fixed identities are developer-managed and persisted in `data/face_registry.json`.
+- Dynamic identities are created automatically in memory during a run and disappear when the API process or CLI exits.
+
+It uses InsightFace `buffalo_l` by default.
 
 First, upload a panorama or current frame to get selectable face boxes:
 
@@ -86,7 +91,7 @@ First, upload a panorama or current frame to get selectable face boxes:
 curl -X POST http://127.0.0.1:8000/faces/candidates -F "file=@images/0001.jpg" -F "annotate=true"
 ```
 
-Then bind one returned `face_id` to a role such as `male_lead`:
+Then bind one returned `face_id` to the fixed library with a role such as `male_lead`:
 
 ```powershell
 curl -X POST http://127.0.0.1:8000/faces/register -H "Content-Type: application/json" -d '{"identity":"male_lead","face_id":"FACE_ID_FROM_CANDIDATES"}'
@@ -96,6 +101,24 @@ Recognize that identity in later frames:
 
 ```powershell
 curl -X POST http://127.0.0.1:8000/faces/recognize -F "identity=male_lead" -F "file=@images/0002.jpg" -F "annotate=true"
+```
+
+Recognize every registered identity in one image and label the output with names such as `person01` and `person02`:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/faces/recognize/all -F "file=@images/0002.jpg" -F "annotate=true"
+```
+
+Recognize every registered identity from the live camera:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/faces/recognize/camera -H "Content-Type: application/json" -d '{"camera_source":"orbbec","camera_index":0,"width":1280,"height":720,"annotate":true}'
+```
+
+Recognize fixed identities and automatically add first-seen unknown faces to the dynamic library as `person01`, `person02`, and so on:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/faces/recognize/camera -H "Content-Type: application/json" -d '{"camera_source":"orbbec","camera_index":0,"width":1280,"height":720,"annotate":true,"auto_register_dynamic":true,"dynamic_prefix":"person"}'
 ```
 
 List registered scene identities:
@@ -174,6 +197,20 @@ Run repeated detection for 30 seconds, once every 5 seconds:
 ```
 
 This writes numbered frames such as `images\orbbec\orbbec-00.jpg`, `images\orbbec\orbbec-01.jpg`, and matching annotated outputs under `images\output\orbbec`.
+
+To label fixed-library people such as `person01` and `person02` in the CLI output images, first register those identities through the face API, then add `--recognize-faces`:
+
+```powershell
+.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --name orbbec_faces --duration 2 --interval 0.1 --width 1280 --height 720 --recognize-faces
+```
+
+The JSON for each sample includes `face_recognition`. If it says `miss_reason: no_registered_identities`, create `data\face_registry.json` by registering faces first.
+
+To maintain a restart-cleared dynamic library during one CLI run, use `--auto-register-faces`:
+
+```powershell
+.\.venv\Scripts\python.exe .\camera_cli.py --source orbbec --camera-index 0 --name orbbec_faces --duration 2 --interval 0.1 --width 1280 --height 720 --auto-register-faces
+```
 
 If Orbbec Viewer or another camera app is open, close it first. OrbbecSDK needs exclusive access to the device stream.
 

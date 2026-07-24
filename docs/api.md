@@ -175,6 +175,7 @@ Recognition result for a requested identity.
 {
   "found": true,
   "identity": "male_lead",
+  "library": "fixed",
   "threshold": 0.45,
   "similarity": 0.71,
   "face_id": "f86d5dc1-eef3-4f1e-b2b2-6d05c4e9e436",
@@ -193,6 +194,7 @@ Recognition result for a requested identity.
 | --- | --- | --- |
 | `found` | boolean | Whether the requested identity was recognized. |
 | `identity` | string | Requested identity. |
+| `library` | string | `fixed` for the persistent developer-managed library, `dynamic` for the restart-cleared runtime library, or `none` when the identity is unknown. |
 | `threshold` | number | Similarity threshold used for this recognition. |
 | `similarity` | number or null | Best similarity score. `null` when no faces are detected. |
 | `face_id` | string or null | Temporary face ID for the recognized face. |
@@ -212,6 +214,47 @@ Recognition result for a requested identity.
 | `identity_not_registered` | The requested identity has not been registered. |
 | `no_faces` | No faces were detected in the image. |
 | `no_identity_match` | Faces were detected, but none reached the threshold. |
+
+### FaceRecognitionResult
+
+Recognition result for all registered identities in one frame.
+
+```json
+{
+  "frame_size": [1280, 720],
+  "registered_count": 2,
+  "fixed_count": 1,
+  "dynamic_count": 1,
+  "face_count": 2,
+  "recognized_count": 2,
+  "auto_registered_count": 1,
+  "matches": [
+    {
+      "found": true,
+      "identity": "person01",
+      "library": "dynamic",
+      "similarity": 0.73,
+      "box": [310, 130, 430, 270]
+    }
+  ],
+  "unmatched_faces": [],
+  "miss_reason": null,
+  "output_path": "images\\output\\0002_recognized_faces.jpg"
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `registered_count` | number | Total number of fixed and dynamic identities considered. |
+| `fixed_count` | number | Number of persistent developer-managed identities considered. |
+| `dynamic_count` | number | Number of runtime dynamic identities currently in memory. |
+| `face_count` | number | Number of faces detected in the frame. |
+| `recognized_count` | number | Number of faces assigned to a registered identity. |
+| `auto_registered_count` | number | Number of unmatched faces added to the dynamic library during this request. |
+| `matches` | FaceMatch[] | Recognized identities. Each item contains the identity name, similarity, face box, and offset. |
+| `unmatched_faces` | FaceCandidate[] | Detected faces that did not match a registered identity. |
+| `miss_reason` | string or null | `no_registered_identities`, `no_faces`, or `no_identity_match` when no identity is recognized. |
+| `output_path` | string or null | Annotated image path when `annotate=true`; otherwise `null`. |
 
 ## Endpoints
 
@@ -463,6 +506,66 @@ Frontend usage:
 - When found, use `box` to draw the face and `offset_ratio` for centering/control.
 - When not found, use `miss_reason`, `similarity`, and `face_count` for debugging and user feedback.
 
+### POST /faces/recognize/all
+
+Uploads an image and recognizes all registered identities in the frame. If `annotate=true`, the output image labels recognized faces with the registered identity names, for example `person01` and `person02`.
+
+Content type: `multipart/form-data`
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `threshold` | number | No | Registered identity thresholds | Temporary similarity threshold override for all identities in this request. |
+| `include_fixed` | boolean | No | `true` | Whether to match the fixed persistent library. |
+| `include_dynamic` | boolean | No | `true` | Whether to match the in-memory dynamic library. |
+| `auto_register_dynamic` | boolean | No | `false` | Whether to add unmatched faces to the dynamic library as first-seen identities. |
+| `dynamic_prefix` | string | No | `person` | Prefix for auto-created dynamic identities, producing names such as `person01`. |
+| `annotate` | boolean | No | `false` | Whether to create an annotated image with all recognized face labels. |
+| `output_name` | string | No | Auto-generated | Annotated image file name. |
+| `file` | File | Yes | - | Image file to recognize. |
+
+Request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/faces/recognize/all \
+  -F "annotate=true" \
+  -F "file=@images/0002.jpg"
+```
+
+Response type: `FaceRecognitionResult`
+
+### POST /faces/recognize/camera
+
+Reads one frame from the backend camera and recognizes all registered identities. The default is `annotate=true`, so it writes an output image labeled with names such as `person01` and `person02`.
+
+Content type: `application/json`
+
+Request body:
+
+```json
+{
+  "camera_source": "orbbec",
+  "camera_index": 0,
+  "width": 1280,
+  "height": 720,
+  "threshold": 0.45,
+  "include_fixed": true,
+  "include_dynamic": true,
+  "auto_register_dynamic": true,
+  "dynamic_prefix": "person",
+  "annotate": true
+}
+```
+
+Request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/faces/recognize/camera \
+  -H "Content-Type: application/json" \
+  -d '{"camera_source":"orbbec","camera_index":0,"width":1280,"height":720,"annotate":true,"auto_register_dynamic":true}'
+```
+
+Response type: `FaceRecognitionResult`
+
 ### GET /faces/identities
 
 Returns all registered business identities.
@@ -477,7 +580,7 @@ Response:
 
 ```json
 {
-  "identities": [
+  "fixed": [
     {
       "identity": "male_lead",
       "threshold": 0.45,
@@ -485,7 +588,8 @@ Response:
       "source_face_id": "c8c69f1e-6b85-4f88-babe-2b7d3e1a1c10",
       "created_at": 1760000000.123
     }
-  ]
+  ],
+  "dynamic": []
 }
 ```
 

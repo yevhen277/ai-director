@@ -14,6 +14,8 @@ import numpy as np
 
 
 DEFAULT_FACE_THRESHOLD = 0.45
+FIXED_FACE_LIBRARY = "fixed"
+DYNAMIC_FACE_LIBRARY = "dynamic"
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,7 @@ class RegisteredFace:
 class FaceMatch:
     found: bool
     identity: str
+    library: str
     threshold: float
     similarity: float | None
     face_id: str | None
@@ -55,6 +58,20 @@ class FaceMatch:
     miss_reason: str | None
 
 
+@dataclass(frozen=True)
+class FaceRecognitionResult:
+    frame_size: tuple[int, int]
+    registered_count: int
+    fixed_count: int
+    dynamic_count: int
+    face_count: int
+    recognized_count: int
+    auto_registered_count: int
+    matches: list[FaceMatch]
+    unmatched_faces: list[FaceCandidate]
+    miss_reason: str | None
+
+
 class FaceRecognitionService:
     def __init__(
         self,
@@ -63,6 +80,7 @@ class FaceRecognitionService:
         providers: list[str] | None = None,
         det_size: tuple[int, int] = (640, 640),
         candidate_ttl_seconds: int = 600,
+        dynamic_prefix: str = "person",
     ):
         self.registry_path = Path(registry_path)
         self.model_name = model_name
@@ -72,6 +90,9 @@ class FaceRecognitionService:
         self._app = None
         self._lock = Lock()
         self._candidates: dict[str, tuple[float, FaceCandidate]] = {}
+        self._dynamic_registry: dict[str, RegisteredFace] = {}
+        self._dynamic_prefix = dynamic_prefix
+        self._dynamic_next_index = 1
 
     def detect_faces(self, image: np.ndarray) -> list[FaceCandidate]:
         self._prune_candidates()
@@ -131,10 +152,15 @@ class FaceRecognitionService:
         height, width = image.shape[:2]
         registry = self._load_registry()
         registered = registry.get(identity)
+        library = FIXED_FACE_LIBRARY
+        if registered is None:
+            registered = self._dynamic_registry.get(identity)
+            library = DYNAMIC_FACE_LIBRARY
         if registered is None:
             return FaceMatch(
                 found=False,
                 identity=identity,
+                library="none",
                 threshold=threshold or DEFAULT_FACE_THRESHOLD,
                 similarity=None,
                 face_id=None,
@@ -159,6 +185,7 @@ class FaceRecognitionService:
             return FaceMatch(
                 found=False,
                 identity=identity,
+                library=library,
                 threshold=effective_threshold,
                 similarity=best_similarity,
                 face_id=None,
@@ -178,6 +205,7 @@ class FaceRecognitionService:
         return FaceMatch(
             found=True,
             identity=identity,
+            library=library,
             threshold=effective_threshold,
             similarity=best_similarity,
             face_id=best.face_id,
@@ -188,6 +216,113 @@ class FaceRecognitionService:
             match_count=len(matches),
             face_count=len(candidates),
             miss_reason=None,
+        )
+
+    def recognize_registered_identities(
+        self,
+        image: np.ndarray,
+        threshold: float | None = None,
+        include_fixed: bool = True,
+        include_dynamic: bool = True,
+        auto_register_dynamic: bool = False,
+        dynamic_prefix: str | None = None,
+    ) -> FaceRecognitionResult:
+        height, width = image.shape[:2]
+        fixed_registry = self._load_registry() if include_fixed else {}
+        dynamic_registry = self._dynamic_registry if include_dynamic else {}
+        registry_entries = [
+            (identity, registered, FIXED_FACE_LIBRARY)
+            for identity, registered in fixed_registry.items()
+        ] + [
+            (identity, registered, DYNAMIC_FACE_LIBRARY)
+            for identity, registered in dynamic_registry.items()
+        ]
+        if not registry_entries and not auto_register_dynamic:
+            return FaceRecognitionResult(
+                frame_size=(width, height),
+                registered_count=0,
+                fixed_count=len(fixed_registry),
+                dynamic_count=len(dynamic_registry),
+                face_count=0,
+                recognized_count=0,
+                auto_registered_count=0,
+                matches=[],
+                unmatched_faces=[],
+                miss_reason="no_registered_identities",
+            )
+
+        candidates = self.detect_faces(image)
+        scored_matches: list[tuple[float, FaceCandidate, str, str, float]] = []
+        for candidate in candidates:
+            for identity, registered, library in registry_entries:
+                effective_threshold = threshold if threshold is not None else registered.threshold
+                similarity = cosine_similarity(candidate.embedding, registered.embedding)
+                if similarity >= effective_threshold:
+                    scored_matches.append((similarity, candidate, identity, library, effective_threshold))
+
+        scored_matches.sort(key=lambda item: item[0], reverse=True)
+        used_face_ids: set[str] = set()
+        used_identity_keys: set[str] = set()
+        matches: list[FaceMatch] = []
+        for similarity, candidate, identity, library, effective_threshold in scored_matches:
+            identity_key = f"{library}:{identity}"
+            if candidate.face_id in used_face_ids or identity_key in used_identity_keys:
+                continue
+            used_face_ids.add(candidate.face_id)
+            used_identity_keys.add(identity_key)
+            matches.append(
+                _match_from_candidate(
+                    candidate=candidate,
+                    identity=identity,
+                    library=library,
+                    threshold=effective_threshold,
+                    similarity=similarity,
+                    frame_size=(width, height),
+                    face_count=len(candidates),
+                )
+            )
+
+        unmatched_faces = [candidate for candidate in candidates if candidate.face_id not in used_face_ids]
+        auto_registered_count = 0
+        if auto_register_dynamic:
+            for candidate in unmatched_faces:
+                dynamic_identity = self._register_dynamic_candidate(
+                    candidate=candidate,
+                    threshold=threshold or DEFAULT_FACE_THRESHOLD,
+                    prefix=dynamic_prefix or self._dynamic_prefix,
+                )
+                matches.append(
+                    _match_from_candidate(
+                        candidate=candidate,
+                        identity=dynamic_identity.identity,
+                        library=DYNAMIC_FACE_LIBRARY,
+                        threshold=dynamic_identity.threshold,
+                        similarity=1.0,
+                        frame_size=(width, height),
+                        face_count=len(candidates),
+                    )
+                )
+                used_face_ids.add(candidate.face_id)
+                auto_registered_count += 1
+            unmatched_faces = [candidate for candidate in candidates if candidate.face_id not in used_face_ids]
+
+        miss_reason = None
+        if not candidates:
+            miss_reason = "no_faces"
+        elif not matches:
+            miss_reason = "no_identity_match"
+
+        return FaceRecognitionResult(
+            frame_size=(width, height),
+            registered_count=len(fixed_registry) + len(self._dynamic_registry if include_dynamic else dynamic_registry),
+            fixed_count=len(fixed_registry),
+            dynamic_count=len(self._dynamic_registry if include_dynamic else dynamic_registry),
+            face_count=len(candidates),
+            recognized_count=len(matches),
+            auto_registered_count=auto_registered_count,
+            matches=matches,
+            unmatched_faces=unmatched_faces,
+            miss_reason=miss_reason,
         )
 
     def identities(self) -> list[dict]:
@@ -202,6 +337,44 @@ class FaceRecognitionService:
             }
             for face in registry.values()
         ]
+
+    def dynamic_identities(self) -> list[dict]:
+        return [
+            registered_to_dict(face) | {"library": DYNAMIC_FACE_LIBRARY}
+            for face in self._dynamic_registry.values()
+        ]
+
+    def clear_dynamic_identities(self) -> int:
+        count = len(self._dynamic_registry)
+        self._dynamic_registry.clear()
+        self._dynamic_next_index = 1
+        return count
+
+    def _register_dynamic_candidate(
+        self,
+        candidate: FaceCandidate,
+        threshold: float,
+        prefix: str,
+    ) -> RegisteredFace:
+        identity = self._next_dynamic_identity(prefix)
+        registered = RegisteredFace(
+            identity=identity,
+            embedding=candidate.embedding,
+            threshold=threshold,
+            source_image=None,
+            source_face_id=candidate.face_id,
+            created_at=time(),
+        )
+        self._dynamic_registry[identity] = registered
+        return registered
+
+    def _next_dynamic_identity(self, prefix: str) -> str:
+        fixed_registry = self._load_registry()
+        while True:
+            identity = f"{prefix}{self._dynamic_next_index:02d}"
+            self._dynamic_next_index += 1
+            if identity not in fixed_registry and identity not in self._dynamic_registry:
+                return identity
 
     def _face_app(self):
         if self._app is None:
@@ -286,10 +459,25 @@ def draw_face_match(image: np.ndarray, match: FaceMatch) -> np.ndarray:
     if not match.found or match.box is None:
         return output
     x1, y1, x2, y2 = match.box
-    cv2.rectangle(output, (x1, y1), (x2, y2), (0, 220, 80), 2)
+    color = _color_for_identity(match.identity)
+    cv2.rectangle(output, (x1, y1), (x2, y2), color, 2)
     similarity = 0.0 if match.similarity is None else match.similarity
     text = f"{match.identity} {similarity:.2f}"
-    cv2.putText(output, text, (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 220, 80), 2)
+    cv2.putText(output, text, (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+    return output
+
+
+def draw_face_matches(image: np.ndarray, matches: Iterable[FaceMatch]) -> np.ndarray:
+    output = image.copy()
+    for match in matches:
+        if not match.found or match.box is None:
+            continue
+        x1, y1, x2, y2 = match.box
+        color = _color_for_identity(match.identity)
+        cv2.rectangle(output, (x1, y1), (x2, y2), color, 2)
+        similarity = 0.0 if match.similarity is None else match.similarity
+        text = f"{match.identity} {similarity:.2f}"
+        cv2.putText(output, text, (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
     return output
 
 
@@ -316,6 +504,7 @@ def match_to_dict(match: FaceMatch) -> dict:
     return {
         "found": match.found,
         "identity": match.identity,
+        "library": match.library,
         "threshold": match.threshold,
         "similarity": match.similarity,
         "face_id": match.face_id,
@@ -329,10 +518,67 @@ def match_to_dict(match: FaceMatch) -> dict:
     }
 
 
+def recognition_result_to_dict(result: FaceRecognitionResult) -> dict:
+    return {
+        "frame_size": result.frame_size,
+        "registered_count": result.registered_count,
+        "fixed_count": result.fixed_count,
+        "dynamic_count": result.dynamic_count,
+        "face_count": result.face_count,
+        "recognized_count": result.recognized_count,
+        "auto_registered_count": result.auto_registered_count,
+        "matches": [match_to_dict(match) for match in result.matches],
+        "unmatched_faces": [candidate_to_dict(candidate) for candidate in result.unmatched_faces],
+        "miss_reason": result.miss_reason,
+    }
+
+
 def cosine_similarity(left: np.ndarray, right: np.ndarray) -> float:
     left = _normalize(left)
     right = _normalize(right)
     return float(np.dot(left, right))
+
+
+def _match_from_candidate(
+    candidate: FaceCandidate,
+    identity: str,
+    library: str,
+    threshold: float,
+    similarity: float,
+    frame_size: tuple[int, int],
+    face_count: int = 1,
+) -> FaceMatch:
+    width, height = frame_size
+    center_x, center_y = candidate.center
+    offset_x = center_x - width / 2
+    offset_y = center_y - height / 2
+    return FaceMatch(
+        found=True,
+        identity=identity,
+        library=library,
+        threshold=threshold,
+        similarity=similarity,
+        face_id=candidate.face_id,
+        box=candidate.box,
+        frame_size=frame_size,
+        offset=(offset_x, offset_y),
+        offset_ratio=(offset_x / width, offset_y / height),
+        match_count=1,
+        face_count=face_count,
+        miss_reason=None,
+    )
+
+
+def _color_for_identity(identity: str) -> tuple[int, int, int]:
+    palette = [
+        (0, 220, 80),
+        (255, 170, 40),
+        (40, 180, 255),
+        (220, 80, 255),
+        (80, 220, 220),
+        (255, 100, 100),
+    ]
+    return palette[sum(identity.encode("utf-8")) % len(palette)]
 
 
 def _normalize(embedding: np.ndarray) -> np.ndarray:

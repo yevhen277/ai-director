@@ -12,6 +12,7 @@ import cv2
 from app.camera import OpenCVCamera, OrbbecColorCamera, list_orbbec_devices
 from app.config import settings
 from app.detector import YoloDetector, draw_detections
+from app.face_recognition import FaceRecognitionService, draw_face_matches, recognition_result_to_dict
 from app.vision import run_yolo_detection
 
 
@@ -70,6 +71,25 @@ def main() -> None:
     parser.add_argument("--name", help="Run name, e.g. test001 writes images/test001/test001-00.jpg")
     parser.add_argument("--no-output", action="store_true", help="Do not write an annotated output image")
     parser.add_argument("--tolerance", type=float, default=0.08, help="Centering tolerance as frame ratio")
+    parser.add_argument(
+        "--recognize-faces",
+        action="store_true",
+        help="Recognize all registered face identities and draw identity labels on annotated output images.",
+    )
+    parser.add_argument(
+        "--auto-register-faces",
+        action="store_true",
+        help="Automatically add first-seen unmatched faces to the in-memory dynamic face library.",
+    )
+    parser.add_argument("--dynamic-face-prefix", default="person", help="Prefix for dynamic identities, e.g. person -> person01")
+    parser.add_argument(
+        "--face-threshold",
+        type=float,
+        default=None,
+        help="Override registered face similarity thresholds for this run.",
+    )
+    parser.add_argument("--face-model", default=settings.face_model, help="InsightFace model name")
+    parser.add_argument("--face-registry", default=settings.face_registry_path, help="Face identity registry path")
     args = parser.parse_args()
 
     if args.list_orbbec:
@@ -90,6 +110,15 @@ def main() -> None:
             confidence=args.confidence,
             image_size=args.imgsz,
             end2end=args.end2end,
+        )
+        face_service = (
+            FaceRecognitionService(
+                registry_path=args.face_registry,
+                model_name=args.face_model,
+                dynamic_prefix=args.dynamic_face_prefix,
+            )
+            if args.recognize_faces or args.auto_register_faces
+            else None
         )
     except (RuntimeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -135,6 +164,10 @@ def main() -> None:
                     targets=args.target,
                     tolerance_ratio=args.tolerance,
                     diagnostic_confidence=args.diagnostic_confidence,
+                    face_service=face_service,
+                    face_threshold=args.face_threshold,
+                    auto_register_faces=args.auto_register_faces,
+                    dynamic_face_prefix=args.dynamic_face_prefix,
                 )
                 sample["index"] = sample_index
                 sample["elapsed_seconds"] = round(time.monotonic() - start_time, 3)
@@ -176,6 +209,10 @@ def _run_sample(
     targets: list[str] | None,
     tolerance_ratio: float,
     diagnostic_confidence: float | None,
+    face_service: FaceRecognitionService | None,
+    face_threshold: float | None,
+    auto_register_faces: bool,
+    dynamic_face_prefix: str,
 ) -> dict:
     input_path.parent.mkdir(parents=True, exist_ok=True)
     if not cv2.imwrite(str(input_path), frame):
@@ -189,9 +226,21 @@ def _run_sample(
         diagnostic_confidence=diagnostic_confidence,
     )
 
+    face_result = None
+    if face_service is not None:
+        face_recognition_result = face_service.recognize_registered_identities(
+            image=frame,
+            threshold=face_threshold,
+            auto_register_dynamic=auto_register_faces,
+            dynamic_prefix=dynamic_face_prefix,
+        )
+        face_result = recognition_result_to_dict(face_recognition_result)
+
     if not no_output:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         annotated = draw_detections(frame, vision_result.detections_for_output)
+        if face_service is not None:
+            annotated = draw_face_matches(annotated, face_recognition_result.matches)
         if not cv2.imwrite(str(output_path), annotated):
             raise RuntimeError(f"could not write annotated image: {output_path}")
 
@@ -199,6 +248,7 @@ def _run_sample(
         "input_path": str(input_path),
         "output_path": None if no_output else str(output_path),
         "results": vision_result.results,
+        "face_recognition": face_result,
     }
 
 
