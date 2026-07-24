@@ -53,6 +53,7 @@ $body = @{
   recognize_faces = $true
   auto_register_dynamic = $true
   max_saved_images = 100
+  replace_existing = $true
 } | ConvertTo-Json -Compress
 
 $run = Invoke-RestMethod `
@@ -61,6 +62,7 @@ $run = Invoke-RestMethod `
   -ContentType "application/json" `
   -Body $body
 
+$global:runId = $run.run_id
 $run
 ```
 
@@ -80,6 +82,7 @@ $body = @{
   recognize_faces = $true
   auto_register_dynamic = $true
   max_saved_images = 100
+  replace_existing = $true
 } | ConvertTo-Json -Compress
 
 $run = Invoke-RestMethod `
@@ -88,15 +91,19 @@ $run = Invoke-RestMethod `
   -ContentType "application/json" `
   -Body $body
 
+$global:runId = $run.run_id
 $run
 ```
 
-启动成功后会返回 `run_id`。先保存起来：
+启动成功后会返回 `run_id`，上面的命令已经自动保存到当前 PowerShell 会话的 `$runId` 变量里。后面查状态、取图、停止，都可以直接用 `$runId`。
+
+查看当前保存的 run id：
 
 ```powershell
-$runId = $run.run_id
 $runId
 ```
+
+再次启动新的持续检测时，接口默认会先停掉同一个相机上的旧任务，再启动新任务。这个行为由 `replace_existing = $true` 控制。
 
 ## 3. 查看实时状态
 
@@ -453,7 +460,9 @@ PowerShell 的引号规则容易把 JSON 传坏。建议用本文里的 `Invoke-
 
 ### 返回 409
 
-说明同一个相机已经有一个持续任务在运行。先停掉旧任务：
+默认启动新任务会自动停掉同一个相机上的旧任务，一般不会返回 409。
+
+如果你把 `replace_existing` 设置成 `$false`，并且同一个相机已经有任务在运行，才会返回 409。此时先停掉旧任务：
 
 ```powershell
 Invoke-RestMethod `

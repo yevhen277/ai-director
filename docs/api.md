@@ -311,7 +311,8 @@ Request body:
   "auto_register_dynamic": true,
   "dynamic_prefix": "person",
   "face_threshold": null,
-  "max_saved_images": 100
+  "max_saved_images": 100,
+  "replace_existing": true
 }
 ```
 
@@ -333,7 +334,7 @@ Response:
 }
 ```
 
-If the same `camera_source` and `camera_index` already has an active run, the API returns `409`.
+If the same `camera_source` and `camera_index` already has an active run, the API stops the old run first by default, then starts the new run. Set `replace_existing=false` to keep the old conflict behavior and return `409`.
 
 Each run keeps only the latest `max_saved_images` frame images on disk. The default is `100`; older raw and annotated files are deleted automatically.
 

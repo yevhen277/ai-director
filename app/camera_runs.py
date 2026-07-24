@@ -257,7 +257,7 @@ class CameraRunManager:
         self._lock = threading.Lock()
         self._runs: dict[str, CameraRun] = {}
 
-    def start_run(self, config: CameraRunConfig) -> CameraRun:
+    def start_run(self, config: CameraRunConfig, replace_existing: bool = False) -> CameraRun:
         _validate_config(config)
         run = CameraRun(
             config=config,
@@ -266,11 +266,24 @@ class CameraRunManager:
             image_dir=self.image_dir,
             output_root=self.output_root,
         )
+        replaced_run = None
+        with self._lock:
+            active = self._active_run_for_camera(run.camera_key)
+            if active is not None:
+                if not replace_existing:
+                    raise CameraRunConflictError(
+                        f"Camera {config.camera_source}:{config.camera_index} is already used by run {active.run_id}"
+                    )
+                replaced_run = active
+
+        if replaced_run is not None:
+            replaced_run.stop()
+
         with self._lock:
             active = self._active_run_for_camera(run.camera_key)
             if active is not None:
                 raise CameraRunConflictError(
-                    f"Camera {config.camera_source}:{config.camera_index} is already used by run {active.run_id}"
+                    f"Camera {config.camera_source}:{config.camera_index} is still used by run {active.run_id}"
                 )
             self._runs[run.run_id] = run
         run.start()

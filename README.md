@@ -79,10 +79,11 @@ curl -X POST http://127.0.0.1:8000/robot/detect/camera -H "Content-Type: applica
 Start continuous camera detection and face recognition in the API:
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8000/camera/runs" -H "Content-Type: application/json" --data-raw "{""camera_source"":""orbbec"",""camera_index"":0,""name"":""orbbec_live"",""width"":1280,""height"":720,""interval"":0.1,""targets"":[""person""],""recognize_faces"":true,""auto_register_dynamic"":true,""max_saved_images"":100}"
+curl.exe -X POST "http://127.0.0.1:8000/camera/runs" -H "Content-Type: application/json" --data-raw "{""camera_source"":""orbbec"",""camera_index"":0,""name"":""orbbec_live"",""width"":1280,""height"":720,""interval"":0.1,""targets"":[""person""],""recognize_faces"":true,""auto_register_dynamic"":true,""max_saved_images"":100,""replace_existing"":true}"
 ```
 
 Each continuous run keeps only the latest `max_saved_images` frame images on disk. The default is `100`, and older raw/annotated frame files are deleted automatically.
+Starting a new run on the same camera stops the old active run by default.
 
 Check the run status with the returned `run_id`:
 

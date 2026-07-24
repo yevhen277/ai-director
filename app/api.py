@@ -113,6 +113,7 @@ class CameraRunStartRequest(BaseModel):
     dynamic_prefix: str = "person"
     face_threshold: float | None = None
     max_saved_images: int = 100
+    replace_existing: bool = True
 
 
 @app.get("/health")
@@ -151,7 +152,7 @@ def start_camera_run(request: CameraRunStartRequest) -> dict:
         max_saved_images=request.max_saved_images,
     )
     try:
-        run = camera_run_manager.start_run(config)
+        run = camera_run_manager.start_run(config, replace_existing=request.replace_existing)
     except CameraRunValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except CameraRunConflictError as exc:
