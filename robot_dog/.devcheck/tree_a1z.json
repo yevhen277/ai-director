@@ -1,0 +1,400 @@
+{
+  "sha": "9006107aa8d4334c762b8bf8e8fe40b3f9477717",
+  "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/9006107aa8d4334c762b8bf8e8fe40b3f9477717",
+  "tree": [
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f5da161da40d4261dfeb5c5c86d2584fded73bae",
+      "size": 1059,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/f5da161da40d4261dfeb5c5c86d2584fded73bae"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4e5c91389dd8cfe9cf2e08e1f9de4d50a260a7ba",
+      "size": 24021,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/4e5c91389dd8cfe9cf2e08e1f9de4d50a260a7ba"
+    },
+    {
+      "path": "a1z",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "adf12b03bb61f2e300b9cc5898ef87162a111968",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/adf12b03bb61f2e300b9cc5898ef87162a111968"
+    },
+    {
+      "path": "a1z/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3e10600461f460dfd8d598cb74737280d1aebab2",
+      "size": 49,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/3e10600461f460dfd8d598cb74737280d1aebab2"
+    },
+    {
+      "path": "a1z/__pycache__",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "be52c43b78c9be0b3f070c2ff91e762fb7bd9ddd",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/be52c43b78c9be0b3f070c2ff91e762fb7bd9ddd"
+    },
+    {
+      "path": "a1z/__pycache__/__init__.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "70a13b9b49065eaf84af113a1b256498e8117634",
+      "size": 214,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/70a13b9b49065eaf84af113a1b256498e8117634"
+    },
+    {
+      "path": "a1z/dynamics",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ebe339e11bba957ad16d623d6b11f40628959cfa",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/ebe339e11bba957ad16d623d6b11f40628959cfa"
+    },
+    {
+      "path": "a1z/dynamics/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4fd028b1028ba0eafd5afbc16d42bae4ff661881",
+      "size": 63,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/4fd028b1028ba0eafd5afbc16d42bae4ff661881"
+    },
+    {
+      "path": "a1z/dynamics/__pycache__",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "eb7f476508354f6e08c5a2e8c8001f8fc65e95a9",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/eb7f476508354f6e08c5a2e8c8001f8fc65e95a9"
+    },
+    {
+      "path": "a1z/dynamics/__pycache__/__init__.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e57ab0063c4fe2e86ead4fba915306623a88a635",
+      "size": 226,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/e57ab0063c4fe2e86ead4fba915306623a88a635"
+    },
+    {
+      "path": "a1z/dynamics/__pycache__/gravity_model.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0edf38bceb41e987e0da2f17f46b58d95f73e81f",
+      "size": 4219,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/0edf38bceb41e987e0da2f17f46b58d95f73e81f"
+    },
+    {
+      "path": "a1z/dynamics/gravity_model.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "98e5a51331a42f9b2e4e928393c91c31ec60e079",
+      "size": 3193,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/98e5a51331a42f9b2e4e928393c91c31ec60e079"
+    },
+    {
+      "path": "a1z/motor_drivers",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "444ab8c4c6f4cb238002af0aefed1701a9cd5077",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/444ab8c4c6f4cb238002af0aefed1701a9cd5077"
+    },
+    {
+      "path": "a1z/motor_drivers/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "49a3971562a0b18cd1a36fc5e62b13baf276963d",
+      "size": 50,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/49a3971562a0b18cd1a36fc5e62b13baf276963d"
+    },
+    {
+      "path": "a1z/motor_drivers/__pycache__",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "571adee059b8e3c039d49ac92fd366faaef9fd0f",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/571adee059b8e3c039d49ac92fd366faaef9fd0f"
+    },
+    {
+      "path": "a1z/motor_drivers/__pycache__/__init__.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "330f6e3ef6c5e076b3c1eac058e5d0956dc89f04",
+      "size": 220,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/330f6e3ef6c5e076b3c1eac058e5d0956dc89f04"
+    },
+    {
+      "path": "a1z/motor_drivers/__pycache__/dm_driver.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "397aef93d6f8b1d29d25c7d959ddc6ae6dd4feb6",
+      "size": 17402,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/397aef93d6f8b1d29d25c7d959ddc6ae6dd4feb6"
+    },
+    {
+      "path": "a1z/motor_drivers/__pycache__/encos_driver.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a203fab4095ec9b818499a7102da879e6836383d",
+      "size": 7817,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/a203fab4095ec9b818499a7102da879e6836383d"
+    },
+    {
+      "path": "a1z/motor_drivers/__pycache__/utils.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "465a83e6c0acada3a14903747788b8b2ea5fa058",
+      "size": 7971,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/465a83e6c0acada3a14903747788b8b2ea5fa058"
+    },
+    {
+      "path": "a1z/motor_drivers/can_interface.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a925a823925883858b27dde8ac157a70dec117ca",
+      "size": 3720,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/a925a823925883858b27dde8ac157a70dec117ca"
+    },
+    {
+      "path": "a1z/motor_drivers/motor_a_driver.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "03b470f57f0094a7882379eb10d38c033f1bb43a",
+      "size": 5663,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/03b470f57f0094a7882379eb10d38c033f1bb43a"
+    },
+    {
+      "path": "a1z/motor_drivers/motor_b_driver.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a1656654dd9659c973fc960a3078569ef7765baa",
+      "size": 13517,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/a1656654dd9659c973fc960a3078569ef7765baa"
+    },
+    {
+      "path": "a1z/motor_drivers/utils.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c98e04c8d27e83b718377285e1340748b43e5a23",
+      "size": 5656,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/c98e04c8d27e83b718377285e1340748b43e5a23"
+    },
+    {
+      "path": "a1z/robot_models",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c772c1d1c2ecdb859daeb4db461c6668b1b6a36a",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/c772c1d1c2ecdb859daeb4db461c6668b1b6a36a"
+    },
+    {
+      "path": "a1z/robot_models/a1z",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9c40573fcb854e75669b789ee1b2fa0602fff1a4",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/9c40573fcb854e75669b789ee1b2fa0602fff1a4"
+    },
+    {
+      "path": "a1z/robot_models/a1z/A1Z_Flange.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "27cfc2db012eed95a847f409c416a04dfdeb3c30",
+      "size": 8794,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/27cfc2db012eed95a847f409c416a04dfdeb3c30"
+    },
+    {
+      "path": "a1z/robots",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f4cf964ac28a3299c1d059015680300975320f87",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/f4cf964ac28a3299c1d059015680300975320f87"
+    },
+    {
+      "path": "a1z/robots/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6b6acb9b2297dcc180e1059b1d256b2bd4f9f683",
+      "size": 43,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/6b6acb9b2297dcc180e1059b1d256b2bd4f9f683"
+    },
+    {
+      "path": "a1z/robots/__pycache__",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9139a3f34b2c74a8a029c3a21716a4efa1e6785c",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/9139a3f34b2c74a8a029c3a21716a4efa1e6785c"
+    },
+    {
+      "path": "a1z/robots/__pycache__/__init__.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fcc18dcc3c3232ac02ed57e5bb893642e55e32be",
+      "size": 204,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/fcc18dcc3c3232ac02ed57e5bb893642e55e32be"
+    },
+    {
+      "path": "a1z/robots/__pycache__/arm_robot.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3074d53f8348db4c86faf4c4c1744c1d54ac6238",
+      "size": 24445,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/3074d53f8348db4c86faf4c4c1744c1d54ac6238"
+    },
+    {
+      "path": "a1z/robots/__pycache__/get_robot.cpython-313.pyc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d8914a5f7abcefe2e676286c26c4da7d73fc5d03",
+      "size": 5307,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/d8914a5f7abcefe2e676286c26c4da7d73fc5d03"
+    },
+    {
+      "path": "a1z/robots/arm_robot.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d45bfc8fff567e069c801ebb3f94288a91b8bf0",
+      "size": 40955,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/5d45bfc8fff567e069c801ebb3f94288a91b8bf0"
+    },
+    {
+      "path": "a1z/robots/get_robot.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e5a8d7661f11bf374c1e5ea7a174a5c3cdb3806e",
+      "size": 4979,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/e5a8d7661f11bf374c1e5ea7a174a5c3cdb3806e"
+    },
+    {
+      "path": "a1z/robots/kinematics.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c623a875efa666f02eaef717956502f94413d57c",
+      "size": 4620,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/c623a875efa666f02eaef717956502f94413d57c"
+    },
+    {
+      "path": "a1z/robots/robot.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "241056fba9b46c7593b0d59cdb36d199e39a6d07",
+      "size": 1337,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/241056fba9b46c7593b0d59cdb36d199e39a6d07"
+    },
+    {
+      "path": "a1z/utils",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "592831a269d1f4e61f464e491ffedc56c54fcd23",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/592831a269d1f4e61f464e491ffedc56c54fcd23"
+    },
+    {
+      "path": "a1z/utils/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "183c974fd4ca1925d6278be86ffb6bc13652aaac",
+      "size": 23,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/183c974fd4ca1925d6278be86ffb6bc13652aaac"
+    },
+    {
+      "path": "a1z/utils/utils.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c56b178ee32d9308bea316ceb307be9d6b238e80",
+      "size": 2324,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/c56b178ee32d9308bea316ceb307be9d6b238e80"
+    },
+    {
+      "path": "docs",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "8bed4362ea9ccc420eed71de44a8115b4343508a",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/8bed4362ea9ccc420eed71de44a8115b4343508a"
+    },
+    {
+      "path": "docs/images",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6916e95b6f838b7aa058428b3285d20c613701f9",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/6916e95b6f838b7aa058428b3285d20c613701f9"
+    },
+    {
+      "path": "docs/images/A1Z.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7573a351f4390e973c026a13706ebd0d2f940f39",
+      "size": 294164,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/7573a351f4390e973c026a13706ebd0d2f940f39"
+    },
+    {
+      "path": "examples",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "bbdf77d638f3375d21bdd7a20815a9cb96415646",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/bbdf77d638f3375d21bdd7a20815a9cb96415646"
+    },
+    {
+      "path": "examples/gravity_comp.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1e0f0b2fbe1d59933e8e268c11b371f062479659",
+      "size": 3810,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/1e0f0b2fbe1d59933e8e268c11b371f062479659"
+    },
+    {
+      "path": "examples/position_hold.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1a2926106c511ae1231ea74dd6fb30cd11a42899",
+      "size": 3626,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/1a2926106c511ae1231ea74dd6fb30cd11a42899"
+    },
+    {
+      "path": "examples/teach_and_play.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da82775153a7d54c26dd01e8a045cea63b6e5199",
+      "size": 5490,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/da82775153a7d54c26dd01e8a045cea63b6e5199"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c50f1182f83d84bd9fe4b09f25c4a20c7cb4b168",
+      "size": 486,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/c50f1182f83d84bd9fe4b09f25c4a20c7cb4b168"
+    },
+    {
+      "path": "setup.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d9b1e2d52bf6549405d941cd7664eb50c4239dd0",
+      "size": 411,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/d9b1e2d52bf6549405d941cd7664eb50c4239dd0"
+    },
+    {
+      "path": "tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "0392e99b0844178f5845e6fbe694f75165640ec2",
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/trees/0392e99b0844178f5845e6fbe694f75165640ec2"
+    },
+    {
+      "path": "tools/motor_diag.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f9bcc7434c8530b39394848cf706ede4d356b167",
+      "size": 34808,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/f9bcc7434c8530b39394848cf706ede4d356b167"
+    },
+    {
+      "path": "tools/set_zero.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a669a8c25de3e73b7145757f0c19d276cdbc40b6",
+      "size": 8053,
+      "url": "https://api.github.com/repos/userguide-galaxea/GALAXEA-A1Z/git/blobs/a669a8c25de3e73b7145757f0c19d276cdbc40b6"
+    }
+  ],
+  "truncated": false
+}

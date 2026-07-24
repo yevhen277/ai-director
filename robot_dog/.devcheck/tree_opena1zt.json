@@ -1,0 +1,493 @@
+{
+  "sha": "5336b3ca52f21a81cdd6d8055a8ea39bd728f4e5",
+  "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/5336b3ca52f21a81cdd6d8055a8ea39bd728f4e5",
+  "tree": [
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2b0ba958f748ebeb6a2ed3637fe8d1a5d2adaf52",
+      "size": 169,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/2b0ba958f748ebeb6a2ed3637fe8d1a5d2adaf52"
+    },
+    {
+      "path": ".gitmodules",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ba94205d8a97eac307c240ba91b64752dfc12479",
+      "size": 120,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/ba94205d8a97eac307c240ba91b64752dfc12479"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ba8407ac28aa2518d82a3f63554c79a04c6e8440",
+      "size": 2421,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/ba8407ac28aa2518d82a3f63554c79a04c6e8440"
+    },
+    {
+      "path": "GALAXEA-A1Z",
+      "mode": "160000",
+      "type": "commit",
+      "sha": "5088ac59503c9daf1456e6d4890362aed4259252"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8d98db0f276970440cb86faead2dc5031a0b4ac3",
+      "size": 1073,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/8d98db0f276970440cb86faead2dc5031a0b4ac3"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "adcf691b047a2b44c37f593ee4a61b4201bddd92",
+      "size": 9034,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/adcf691b047a2b44c37f593ee4a61b4201bddd92"
+    },
+    {
+      "path": "config",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "8778564753213e13e393b89ecbecd4b3eb86abaf",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/8778564753213e13e393b89ecbecd4b3eb86abaf"
+    },
+    {
+      "path": "config/teleop.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e790ee725e30081a24c4a818175768ef401fafb6",
+      "size": 739,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/e790ee725e30081a24c4a818175768ef401fafb6"
+    },
+    {
+      "path": "hardware",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "b34f33fcc99259937a23f4a17b664cdaa1d0986f",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/b34f33fcc99259937a23f4a17b664cdaa1d0986f"
+    },
+    {
+      "path": "hardware/3d_printing_files",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e36fff6f52148768cbbedd981524e4adb592092b",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/e36fff6f52148768cbbedd981524e4adb592092b"
+    },
+    {
+      "path": "hardware/3d_printing_files/base.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b0266380149bec83b4985c25bf72ae469f0e06aa",
+      "size": 311584,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/b0266380149bec83b4985c25bf72ae469f0e06aa"
+    },
+    {
+      "path": "hardware/3d_printing_files/link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ae5ec71996efc56d4e64e8f476caa132acdc27c8",
+      "size": 191484,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/ae5ec71996efc56d4e64e8f476caa132acdc27c8"
+    },
+    {
+      "path": "hardware/3d_printing_files/link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9bbcda9771bf513c72e8ac7bc43309e1ea5be465",
+      "size": 215484,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/9bbcda9771bf513c72e8ac7bc43309e1ea5be465"
+    },
+    {
+      "path": "hardware/3d_printing_files/link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "64013ae485777480bb7eb8d3536b90a5c3827079",
+      "size": 182184,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/64013ae485777480bb7eb8d3536b90a5c3827079"
+    },
+    {
+      "path": "hardware/3d_printing_files/link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "96323d8b7bd40ea7d6d5ae67eb4efaf3d1d485f6",
+      "size": 108684,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/96323d8b7bd40ea7d6d5ae67eb4efaf3d1d485f6"
+    },
+    {
+      "path": "hardware/3d_printing_files/link5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "564c3d5f4fd55f66a26f50bdc543737b6b3141d7",
+      "size": 230184,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/564c3d5f4fd55f66a26f50bdc543737b6b3141d7"
+    },
+    {
+      "path": "hardware/3d_printing_files/link6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eae6a779893e2f2e71f8d32247ea43243ac39af1",
+      "size": 900184,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/eae6a779893e2f2e71f8d32247ea43243ac39af1"
+    },
+    {
+      "path": "hardware/3d_printing_files/open_a1z_t.3mf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4e5c23561950a991939c117a13feac6ee3a7c72b",
+      "size": 575284,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/4e5c23561950a991939c117a13feac6ee3a7c72b"
+    },
+    {
+      "path": "hardware/3d_printing_files/trigger.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "054396b6ddaa3154a74046deffd3964ab91b7af6",
+      "size": 154284,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/054396b6ddaa3154a74046deffd3964ab91b7af6"
+    },
+    {
+      "path": "hardware/A1Z-T_Installation_Guide_CN.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d9b2b32f223b59cb97732b9841ef3a168cd4266",
+      "size": 5821,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/3d9b2b32f223b59cb97732b9841ef3a168cd4266"
+    },
+    {
+      "path": "hardware/A1Z-T_Installation_Guide_EN.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4eaaeb6fde2579559edaf925cd02a0a8254270a9",
+      "size": 5759,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/4eaaeb6fde2579559edaf925cd02a0a8254270a9"
+    },
+    {
+      "path": "hardware/images",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9fb8f39ff4a8667d24828d84f6216a5ccf4a5337",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/9fb8f39ff4a8667d24828d84f6216a5ccf4a5337"
+    },
+    {
+      "path": "hardware/images/image_0.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "10a4646e2428b1a0b400db18bd1c66221aac26b5",
+      "size": 656357,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/10a4646e2428b1a0b400db18bd1c66221aac26b5"
+    },
+    {
+      "path": "hardware/images/image_1.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "43b66fe69afbaa59a80a4dcc77da190ecf024bb5",
+      "size": 601953,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/43b66fe69afbaa59a80a4dcc77da190ecf024bb5"
+    },
+    {
+      "path": "hardware/images/image_10.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "91f8a43d0a1a2136e28b80dc3ea51eb07f7aef35",
+      "size": 313106,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/91f8a43d0a1a2136e28b80dc3ea51eb07f7aef35"
+    },
+    {
+      "path": "hardware/images/image_11.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "785bfbe0f925cb05fc7ec523d5f86d4d7cc13f04",
+      "size": 290321,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/785bfbe0f925cb05fc7ec523d5f86d4d7cc13f04"
+    },
+    {
+      "path": "hardware/images/image_12.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "014c7606489b0c132d7647fb2355b9466d503e7f",
+      "size": 528431,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/014c7606489b0c132d7647fb2355b9466d503e7f"
+    },
+    {
+      "path": "hardware/images/image_13.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2d8a265a47fa81c606f3f86867e601dca47a243",
+      "size": 380500,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/b2d8a265a47fa81c606f3f86867e601dca47a243"
+    },
+    {
+      "path": "hardware/images/image_14.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6bd0ab0144a46a89480b6422b9ea0fe555e9824",
+      "size": 329097,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/b6bd0ab0144a46a89480b6422b9ea0fe555e9824"
+    },
+    {
+      "path": "hardware/images/image_15.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5b9bc7f789af3a63342a97e450feed104ff72047",
+      "size": 595830,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/5b9bc7f789af3a63342a97e450feed104ff72047"
+    },
+    {
+      "path": "hardware/images/image_16.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6dcef0b81a007bd295ebd91a2859d240bd3bde92",
+      "size": 467256,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/6dcef0b81a007bd295ebd91a2859d240bd3bde92"
+    },
+    {
+      "path": "hardware/images/image_17.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "91b3784b977ee014c76b5c0fd6680c7361042514",
+      "size": 280929,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/91b3784b977ee014c76b5c0fd6680c7361042514"
+    },
+    {
+      "path": "hardware/images/image_18.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b5df5f7458f86132889e739417092e20def840ed",
+      "size": 592820,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/b5df5f7458f86132889e739417092e20def840ed"
+    },
+    {
+      "path": "hardware/images/image_19.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f2e850f44566761c465c22bd89a1434cd1494b0c",
+      "size": 591591,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/f2e850f44566761c465c22bd89a1434cd1494b0c"
+    },
+    {
+      "path": "hardware/images/image_2.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e116d5408f01b196a5ab3a5eda3bba628336cbe2",
+      "size": 490361,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/e116d5408f01b196a5ab3a5eda3bba628336cbe2"
+    },
+    {
+      "path": "hardware/images/image_20.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3e841f93eafda6922b752cbe9df7de3e271e3d8b",
+      "size": 554790,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/3e841f93eafda6922b752cbe9df7de3e271e3d8b"
+    },
+    {
+      "path": "hardware/images/image_21.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2c471005bbaf15b0f072902c6c8928ddd6f74099",
+      "size": 574170,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/2c471005bbaf15b0f072902c6c8928ddd6f74099"
+    },
+    {
+      "path": "hardware/images/image_22.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2bd64403a1d6b7074729073454d753917a5b31c9",
+      "size": 312722,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/2bd64403a1d6b7074729073454d753917a5b31c9"
+    },
+    {
+      "path": "hardware/images/image_23.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4058a51540e58e9f54162e4b7120d09de0268673",
+      "size": 412996,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/4058a51540e58e9f54162e4b7120d09de0268673"
+    },
+    {
+      "path": "hardware/images/image_24.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5905d47eaba86f2216fe2f26d66d7a41b1cfa0c7",
+      "size": 611093,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/5905d47eaba86f2216fe2f26d66d7a41b1cfa0c7"
+    },
+    {
+      "path": "hardware/images/image_25.jpg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e308de9a2665130917f1bf22265cd183c59d26ac",
+      "size": 162051,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/e308de9a2665130917f1bf22265cd183c59d26ac"
+    },
+    {
+      "path": "hardware/images/image_26.jpg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ca3a07da74a99a49ed2bbfc78b787c96f5ceb8b9",
+      "size": 105340,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/ca3a07da74a99a49ed2bbfc78b787c96f5ceb8b9"
+    },
+    {
+      "path": "hardware/images/image_3.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b5df0cacecacb84e4a9b4ecb4b078783426dc451",
+      "size": 127286,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/b5df0cacecacb84e4a9b4ecb4b078783426dc451"
+    },
+    {
+      "path": "hardware/images/image_4.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bb2b8d7d30fd77afbd084080292debf2e3b7a403",
+      "size": 183684,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/bb2b8d7d30fd77afbd084080292debf2e3b7a403"
+    },
+    {
+      "path": "hardware/images/image_5.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a609ace574e035a3f5a2ad1ab6a27abb20a50257",
+      "size": 366109,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/a609ace574e035a3f5a2ad1ab6a27abb20a50257"
+    },
+    {
+      "path": "hardware/images/image_8.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "17d2484e4c13175619dd55aed2b5a0386ae15d42",
+      "size": 333733,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/17d2484e4c13175619dd55aed2b5a0386ae15d42"
+    },
+    {
+      "path": "hardware/images/image_9.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "29ee710f63fd92d1c72194be52b410f47cd36246",
+      "size": 379280,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/29ee710f63fd92d1c72194be52b410f47cd36246"
+    },
+    {
+      "path": "hardware/images/image_cover.jpg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "97d06d19448d9532e8c75b772433598a064ea058",
+      "size": 2269104,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/97d06d19448d9532e8c75b772433598a064ea058"
+    },
+    {
+      "path": "leader",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "0021a07c02dceb57ce6fd9bf8b59165f9c7a0b55",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/0021a07c02dceb57ce6fd9bf8b59165f9c7a0b55"
+    },
+    {
+      "path": "leader/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "62db48225c6410c1ed636f8cd7ec6305f1c6e284",
+      "size": 462,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/62db48225c6410c1ed636f8cd7ec6305f1c6e284"
+    },
+    {
+      "path": "leader/gravity_comp.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f70f1d01f42427a99640d042222eea1f12fe3e4",
+      "size": 4406,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/6f70f1d01f42427a99640d042222eea1f12fe3e4"
+    },
+    {
+      "path": "leader/servo_bus.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cb2bc72822815ad668b84c4773a0b5588010b53e",
+      "size": 10197,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/cb2bc72822815ad668b84c4773a0b5588010b53e"
+    },
+    {
+      "path": "leader/urdf",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "eb08e419951fb7e21abb0eae35d72fa2707debc7",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/eb08e419951fb7e21abb0eae35d72fa2707debc7"
+    },
+    {
+      "path": "leader/urdf/servo_leader.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9da75f1dd405ddfb0c5cc662ce5d575520fe02a3",
+      "size": 11414,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/9da75f1dd405ddfb0c5cc662ce5d575520fe02a3"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ecb56d2911b000e148d2d8c11c6f4e323b4b0e0",
+      "size": 424,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/6ecb56d2911b000e148d2d8c11c6f4e323b4b0e0"
+    },
+    {
+      "path": "scripts",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1e12502a1677684a3e17af74628ecb92a5c83f45",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/1e12502a1677684a3e17af74628ecb92a5c83f45"
+    },
+    {
+      "path": "scripts/setup_can.sh",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "0efe00d96889724fe5ffd6a438e80b338b6f722b",
+      "size": 616,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/0efe00d96889724fe5ffd6a438e80b338b6f722b"
+    },
+    {
+      "path": "teleop.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c18acf0bb0807426d7f4569544981aab68178179",
+      "size": 15375,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/c18acf0bb0807426d7f4569544981aab68178179"
+    },
+    {
+      "path": "tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "956155e23c8a1103a0e45716b42fbbd394a74f90",
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/trees/956155e23c8a1103a0e45716b42fbbd394a74f90"
+    },
+    {
+      "path": "tools/scan_servos.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b4d4483e6c57ffe314a907807dbe8525f088c1c4",
+      "size": 2871,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/b4d4483e6c57ffe314a907807dbe8525f088c1c4"
+    },
+    {
+      "path": "tools/setup_right_servo_ids.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d36d10765ff47d78ce74e96e68703473d8c0ca69",
+      "size": 7604,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/d36d10765ff47d78ce74e96e68703473d8c0ca69"
+    },
+    {
+      "path": "tools/setup_servo_ids.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d042f197794a025dc6cee10a030f15d8713cba70",
+      "size": 6102,
+      "url": "https://api.github.com/repos/userguide-galaxea/OpenA1Z-T/git/blobs/d042f197794a025dc6cee10a030f15d8713cba70"
+    }
+  ],
+  "truncated": false
+}

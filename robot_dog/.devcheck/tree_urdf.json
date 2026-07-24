@@ -1,0 +1,1366 @@
+{
+  "sha": "48289aef1fda293fe41f33a80738f1b566f6b659",
+  "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/48289aef1fda293fe41f33a80738f1b566f6b659",
+  "tree": [
+    {
+      "path": ".DS_Store",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7d56ed620d0d8d1a4f0e3eec9a8654433bc6d3d8",
+      "size": 6148,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/7d56ed620d0d8d1a4f0e3eec9a8654433bc6d3d8"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "62c893550adb53d3a8fc29a1584ff831cb829062",
+      "size": 6,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/62c893550adb53d3a8fc29a1584ff831cb829062"
+    },
+    {
+      "path": "A1",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "50e0d644836ca8aceb6fd7b7941d5e61ee7e1e51",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/50e0d644836ca8aceb6fd7b7941d5e61ee7e1e51"
+    },
+    {
+      "path": "A1/A1_URDF_0607_0028.rviz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e0542af92673eb0d5e415b04fe60971dac181f05",
+      "size": 5660,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/e0542af92673eb0d5e415b04fe60971dac181f05"
+    },
+    {
+      "path": "A1/CMakeLists.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "755c7a1486e3331e25b1bc386afcf49f2deaf210",
+      "size": 295,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/755c7a1486e3331e25b1bc386afcf49f2deaf210"
+    },
+    {
+      "path": "A1/config",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ef956db99d423582c1046bbdc43600ed716fae9e",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/ef956db99d423582c1046bbdc43600ed716fae9e"
+    },
+    {
+      "path": "A1/config/joint_names_A1_URDF_0607_0028.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "146ab837ab9d448d5ba0489d4a1e98b8ac9d2d5c",
+      "size": 150,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/146ab837ab9d448d5ba0489d4a1e98b8ac9d2d5c"
+    },
+    {
+      "path": "A1/export.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c79c60e9069d05528c5a03b9924cd2c5afcd8d45",
+      "size": 1792045,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/c79c60e9069d05528c5a03b9924cd2c5afcd8d45"
+    },
+    {
+      "path": "A1/launch",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "3adfd21cc689f9d30ee1d714e0a4fffd811570ba",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/3adfd21cc689f9d30ee1d714e0a4fffd811570ba"
+    },
+    {
+      "path": "A1/launch/display_A1.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2c0f66ba1eaeefac5a922d7ccdd937b1dd8e6f0",
+      "size": 525,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/c2c0f66ba1eaeefac5a922d7ccdd937b1dd8e6f0"
+    },
+    {
+      "path": "A1/launch/gazebo_A1.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "15a633031d7c56519aa1d6bc8d74445c534cb0fb",
+      "size": 579,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/15a633031d7c56519aa1d6bc8d74445c534cb0fb"
+    },
+    {
+      "path": "A1/meshes",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "a837ae9f7fb38bc1af410f2a9f692265fe0d04fd",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/a837ae9f7fb38bc1af410f2a9f692265fe0d04fd"
+    },
+    {
+      "path": "A1/meshes/arm_seg1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ccca56cd1ac7b2c2f46db9e12666634d7d803023",
+      "size": 1924784,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ccca56cd1ac7b2c2f46db9e12666634d7d803023"
+    },
+    {
+      "path": "A1/meshes/arm_seg2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24e42eead174d9e2f5eae38f2570b44f6ab03bf1",
+      "size": 539684,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/24e42eead174d9e2f5eae38f2570b44f6ab03bf1"
+    },
+    {
+      "path": "A1/meshes/arm_seg3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3f32f1f8fac0cabdf7c9f4446d82937d36661810",
+      "size": 1976034,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/3f32f1f8fac0cabdf7c9f4446d82937d36661810"
+    },
+    {
+      "path": "A1/meshes/arm_seg4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0da669465e6ec6a4504e693eb18a26fb70fe367d",
+      "size": 251384,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/0da669465e6ec6a4504e693eb18a26fb70fe367d"
+    },
+    {
+      "path": "A1/meshes/arm_seg5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a2086212f7e2436d78c1725e8575da17bebe07ad",
+      "size": 306684,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/a2086212f7e2436d78c1725e8575da17bebe07ad"
+    },
+    {
+      "path": "A1/meshes/arm_seg6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9388ce3b203c3c912d4d664d1999ed2f8a99f41f",
+      "size": 1134584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/9388ce3b203c3c912d4d664d1999ed2f8a99f41f"
+    },
+    {
+      "path": "A1/meshes/base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "efc9ec7d4ceee498aec5a04e46b111451967e5f1",
+      "size": 608084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/efc9ec7d4ceee498aec5a04e46b111451967e5f1"
+    },
+    {
+      "path": "A1/meshes/gripper1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "64b7c0ad45418e6342742de54314f03abce15e23",
+      "size": 567484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/64b7c0ad45418e6342742de54314f03abce15e23"
+    },
+    {
+      "path": "A1/meshes/gripper2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "407a8ac885965465f9dfa568784dd08be9e62980",
+      "size": 567484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/407a8ac885965465f9dfa568784dd08be9e62980"
+    },
+    {
+      "path": "A1/package.xml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "69465cc2fecae203ac96f044478f8d8ada474131",
+      "size": 666,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/69465cc2fecae203ac96f044478f8d8ada474131"
+    },
+    {
+      "path": "A1/urdf",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e017a5c865f6143975413a0892112855f3ccaf7f",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/e017a5c865f6143975413a0892112855f3ccaf7f"
+    },
+    {
+      "path": "A1/urdf/A1_URDF_0607_0028.csv",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "34dd4e64ad634d95e125fa9f43df626603a5ae3c",
+      "size": 4540,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/34dd4e64ad634d95e125fa9f43df626603a5ae3c"
+    },
+    {
+      "path": "A1/urdf/A1_URDF_0607_0028.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "845d3d2b6fab8ce71d2f193fe2982d852260f5b7",
+      "size": 11437,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/845d3d2b6fab8ce71d2f193fe2982d852260f5b7"
+    },
+    {
+      "path": "A1X",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "64ae978937434c297e91d73733f3960a9f449646",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/64ae978937434c297e91d73733f3960a9f449646"
+    },
+    {
+      "path": "A1X/CMakeLists.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f3f3049e82a2790a0a21700ee9f888117cfbde3",
+      "size": 267,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/6f3f3049e82a2790a0a21700ee9f888117cfbde3"
+    },
+    {
+      "path": "A1X/config",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "09ed902f30f2667df6c504b4a495580ee66f7829",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/09ed902f30f2667df6c504b4a495580ee66f7829"
+    },
+    {
+      "path": "A1X/config/joint_names_a1x.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d2fc07e710b7ab1001b47762121a5aa6f292f67",
+      "size": 115,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/5d2fc07e710b7ab1001b47762121a5aa6f292f67"
+    },
+    {
+      "path": "A1X/export.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cfee66683e0c1b2fd297ac8cd51d0457089839d3",
+      "size": 972,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/cfee66683e0c1b2fd297ac8cd51d0457089839d3"
+    },
+    {
+      "path": "A1X/launch",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "3c8d311a8bd9b4f1360f0284df6513d6f0c3eab9",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/3c8d311a8bd9b4f1360f0284df6513d6f0c3eab9"
+    },
+    {
+      "path": "A1X/launch/display.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "14d49134d326023854376f1d32c27d867ad922a8",
+      "size": 451,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/14d49134d326023854376f1d32c27d867ad922a8"
+    },
+    {
+      "path": "A1X/launch/gazebo.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8a02fe8c8c5dd84fa422f95def63d00a4220c26",
+      "size": 518,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f8a02fe8c8c5dd84fa422f95def63d00a4220c26"
+    },
+    {
+      "path": "A1X/meshes",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f47b37dcb6959e0a6cba20eb9ef3da03115129d0",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/f47b37dcb6959e0a6cba20eb9ef3da03115129d0"
+    },
+    {
+      "path": "A1X/meshes/arm_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dbda3ea9ae57bfc42949b779eeb805020dae7218",
+      "size": 125584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/dbda3ea9ae57bfc42949b779eeb805020dae7218"
+    },
+    {
+      "path": "A1X/meshes/arm_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2ee0b58ccc33df6e1b8a231ed352ca9f49549fac",
+      "size": 560734,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/2ee0b58ccc33df6e1b8a231ed352ca9f49549fac"
+    },
+    {
+      "path": "A1X/meshes/arm_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "428f2601b34b720582ec8420baa7a72c7bc8a331",
+      "size": 427184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/428f2601b34b720582ec8420baa7a72c7bc8a331"
+    },
+    {
+      "path": "A1X/meshes/arm_link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0cbcf033c4e444facc10592746ffc3453c24b7a0",
+      "size": 136784,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/0cbcf033c4e444facc10592746ffc3453c24b7a0"
+    },
+    {
+      "path": "A1X/meshes/arm_link5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7605366b7790084b93d6ad953832339446dac99f",
+      "size": 28684,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/7605366b7790084b93d6ad953832339446dac99f"
+    },
+    {
+      "path": "A1X/meshes/arm_link6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1c8d469bee1e2dd2bc7ed74ca235c8f67d1b29bd",
+      "size": 151084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/1c8d469bee1e2dd2bc7ed74ca235c8f67d1b29bd"
+    },
+    {
+      "path": "A1X/meshes/base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff7002d1c55195f285ec0c8136a367d2f25182cd",
+      "size": 477284,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ff7002d1c55195f285ec0c8136a367d2f25182cd"
+    },
+    {
+      "path": "A1X/meshes/gripper_finger_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b4affc7b32e57b928e8feb6f2ce1ff2869a5acc2",
+      "size": 256484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/b4affc7b32e57b928e8feb6f2ce1ff2869a5acc2"
+    },
+    {
+      "path": "A1X/meshes/gripper_finger_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "17b140fcfd06b0236d26788acb25fb6e059b172f",
+      "size": 256484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/17b140fcfd06b0236d26788acb25fb6e059b172f"
+    },
+    {
+      "path": "A1X/meshes/gripper_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "01812abd2071429bf38321d2a1f3e2a5a80937f9",
+      "size": 135484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/01812abd2071429bf38321d2a1f3e2a5a80937f9"
+    },
+    {
+      "path": "A1X/meshes/mmp_revB_invconfig_upright_a1x.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ad03bc630b1a665e3de5ef30fdf7bdd76e927170",
+      "size": 42903,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ad03bc630b1a665e3de5ef30fdf7bdd76e927170"
+    },
+    {
+      "path": "A1X/package.xml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2222f68a7099262a0e6889a94a66a57a98344c3d",
+      "size": 604,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/2222f68a7099262a0e6889a94a66a57a98344c3d"
+    },
+    {
+      "path": "A1X/urdf",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "47536a9c63371bd6133d68ab04c1e6a470bc10c4",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/47536a9c63371bd6133d68ab04c1e6a470bc10c4"
+    },
+    {
+      "path": "A1X/urdf/a1x.csv",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "182cbf52e20ff68617c74301f0b3271cd18cea3a",
+      "size": 3845,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/182cbf52e20ff68617c74301f0b3271cd18cea3a"
+    },
+    {
+      "path": "A1X/urdf/a1x.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "48aae6392c8eb7e37aa3ce7c068039f1bed4291c",
+      "size": 13164,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/48aae6392c8eb7e37aa3ce7c068039f1bed4291c"
+    },
+    {
+      "path": "A1Y",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "5d699700617cba83ccf15431d0045bdb3a06595b",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/5d699700617cba83ccf15431d0045bdb3a06595b"
+    },
+    {
+      "path": "A1Y/.vscode",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d09d733e2769319b8650566b61027949756355f8",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/d09d733e2769319b8650566b61027949756355f8"
+    },
+    {
+      "path": "A1Y/.vscode/c_cpp_properties.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "348904b9f96d311e6ced7bffc27b54d777023f14",
+      "size": 460,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/348904b9f96d311e6ced7bffc27b54d777023f14"
+    },
+    {
+      "path": "A1Y/.vscode/settings.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "00aa30ee6f4e9babf1a1f871dd0feeb909c5c0f4",
+      "size": 306,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/00aa30ee6f4e9babf1a1f871dd0feeb909c5c0f4"
+    },
+    {
+      "path": "A1Y/CMakeLists.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9564f785a576aaa4474526354ff2a52caad34cdb",
+      "size": 281,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/9564f785a576aaa4474526354ff2a52caad34cdb"
+    },
+    {
+      "path": "A1Y/config",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "49f1884ddacefbd05c0c6c8d46731be29e792470",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/49f1884ddacefbd05c0c6c8d46731be29e792470"
+    },
+    {
+      "path": "A1Y/config/joint_names_a1y.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "126061f6aec116de7ce5eec68e2216fd1048e7e4",
+      "size": 166,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/126061f6aec116de7ce5eec68e2216fd1048e7e4"
+    },
+    {
+      "path": "A1Y/export.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3d4e40004b9941c15e1a6a929957d0dcb3b6d28",
+      "size": 169101,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/a3d4e40004b9941c15e1a6a929957d0dcb3b6d28"
+    },
+    {
+      "path": "A1Y/launch",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f7126876d83d5d3661a6b64da16867ec9e7dbe73",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/f7126876d83d5d3661a6b64da16867ec9e7dbe73"
+    },
+    {
+      "path": "A1Y/launch/display.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "adc8f0a2a05139b48ba27605ef1ed0248751dd12",
+      "size": 470,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/adc8f0a2a05139b48ba27605ef1ed0248751dd12"
+    },
+    {
+      "path": "A1Y/launch/gazebo.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b18d5c834f773d0e214257e7880f03efbb0af334",
+      "size": 537,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/b18d5c834f773d0e214257e7880f03efbb0af334"
+    },
+    {
+      "path": "A1Y/meshes",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "230e00e55b5a6a5c93183154ce023f53cdef52b9",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/230e00e55b5a6a5c93183154ce023f53cdef52b9"
+    },
+    {
+      "path": "A1Y/meshes/arm_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d51a9f6e8005a391fb31e1e173213142ee5923c2",
+      "size": 127984,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/d51a9f6e8005a391fb31e1e173213142ee5923c2"
+    },
+    {
+      "path": "A1Y/meshes/arm_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0ac537505b7b443301a4cad6e5f11b5d6ec2a952",
+      "size": 565684,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/0ac537505b7b443301a4cad6e5f11b5d6ec2a952"
+    },
+    {
+      "path": "A1Y/meshes/arm_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d11509708684d4ef36df8093a16d2b8f1d4c0a36",
+      "size": 478284,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/d11509708684d4ef36df8093a16d2b8f1d4c0a36"
+    },
+    {
+      "path": "A1Y/meshes/arm_link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e2e361c3bfd60a875565fca0f4daf8dd4fc35293",
+      "size": 150484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/e2e361c3bfd60a875565fca0f4daf8dd4fc35293"
+    },
+    {
+      "path": "A1Y/meshes/arm_link5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bc5de29bf420d170fb3d9379a8d03e8e7106ab89",
+      "size": 220084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/bc5de29bf420d170fb3d9379a8d03e8e7106ab89"
+    },
+    {
+      "path": "A1Y/meshes/arm_link6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9b9152165c58c54781390d426d6464fae6e53d7f",
+      "size": 156584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/9b9152165c58c54781390d426d6464fae6e53d7f"
+    },
+    {
+      "path": "A1Y/meshes/base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "13aafbdcbc2d5da3da6a576f4bf72772d18a1b6e",
+      "size": 493284,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/13aafbdcbc2d5da3da6a576f4bf72772d18a1b6e"
+    },
+    {
+      "path": "A1Y/meshes/gripper_finger_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2d7ac1308751f35ceac0752fb9cbe78fa0f99fc9",
+      "size": 262184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/2d7ac1308751f35ceac0752fb9cbe78fa0f99fc9"
+    },
+    {
+      "path": "A1Y/meshes/gripper_finger_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "60a5d2c75d73439d8034d1ae88394e60d3dceba4",
+      "size": 262184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/60a5d2c75d73439d8034d1ae88394e60d3dceba4"
+    },
+    {
+      "path": "A1Y/meshes/gripper_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d1ddf79f18e4f4dafae2b8a13f022d08c168b173",
+      "size": 128784,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/d1ddf79f18e4f4dafae2b8a13f022d08c168b173"
+    },
+    {
+      "path": "A1Y/package.xml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da3fd06749ac4217f781beeeaf7d33eabd4e2904",
+      "size": 624,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/da3fd06749ac4217f781beeeaf7d33eabd4e2904"
+    },
+    {
+      "path": "A1Y/urdf",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "db0b07a6a8f21c8ae5a856c1c1d369856012e0ea",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/db0b07a6a8f21c8ae5a856c1c1d369856012e0ea"
+    },
+    {
+      "path": "A1Y/urdf/a1y.csv",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3210f3cb9151c0e951ca8763589bc77a45860626",
+      "size": 6696,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/3210f3cb9151c0e951ca8763589bc77a45860626"
+    },
+    {
+      "path": "A1Y/urdf/a1y.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33a713ceccd5a823af513421a9d87d2267511546",
+      "size": 13591,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/33a713ceccd5a823af513421a9d87d2267511546"
+    },
+    {
+      "path": "A1Z",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "3a08d52beb39e99c091469f22dd440f45e6de251",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/3a08d52beb39e99c091469f22dd440f45e6de251"
+    },
+    {
+      "path": "A1Z/.DS_Store",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "599977d2eec86038c98b32c1a3f532edc23f62f7",
+      "size": 6148,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/599977d2eec86038c98b32c1a3f532edc23f62f7"
+    },
+    {
+      "path": "A1Z/A1Z_Flange",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "533474616c486980e728f5969e5e3655464ff363",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/533474616c486980e728f5969e5e3655464ff363"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/.DS_Store",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ed7739c78d2b98090fea74861345f96c669066b",
+      "size": 6148,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/7ed7739c78d2b98090fea74861345f96c669066b"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/CMakeLists.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "30833c7e4f4113e503a653582b791c1ce141e6f7",
+      "size": 288,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/30833c7e4f4113e503a653582b791c1ce141e6f7"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/config",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "2bc71e97b9390e8dd0865f72e3517b3e28229752",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/2bc71e97b9390e8dd0865f72e3517b3e28229752"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/config/joint_names_A1Z_nogripper.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ec45f959e44b3dbdca2728c0dfddc9eeea8c6211",
+      "size": 116,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ec45f959e44b3dbdca2728c0dfddc9eeea8c6211"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/export.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fc94cba004e63a3d88cbf25a9245ecab4269e70c",
+      "size": 538014,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/fc94cba004e63a3d88cbf25a9245ecab4269e70c"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/launch",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "47d0d527e14cc9970ee1df18e31f30bcf835cccb",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/47d0d527e14cc9970ee1df18e31f30bcf835cccb"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/launch/display.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fdd67e6f3272cb180705fb48bd517d516d6d805d",
+      "size": 500,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/fdd67e6f3272cb180705fb48bd517d516d6d805d"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/launch/gazebo.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8b3791ebbb6f7c48e11d6fe3eae34df8af9bf07",
+      "size": 567,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f8b3791ebbb6f7c48e11d6fe3eae34df8af9bf07"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "a54f79220e75cbab6e0bdb70c7833e547ffc64fd",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/a54f79220e75cbab6e0bdb70c7833e547ffc64fd"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes/arm_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2ee5c325c65df54baf87995f0518c30ae268d45",
+      "size": 704484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/b2ee5c325c65df54baf87995f0518c30ae268d45"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes/arm_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "975f9a6906653b7c5436dec6b13f00547e1aa46d",
+      "size": 1593784,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/975f9a6906653b7c5436dec6b13f00547e1aa46d"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes/arm_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "71e06b8be8bdc90cc328a60474645361b91c67c1",
+      "size": 1835984,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/71e06b8be8bdc90cc328a60474645361b91c67c1"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes/arm_link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "80804480f51134cb2d7a5c1aacf4da8df09a0efe",
+      "size": 1236084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/80804480f51134cb2d7a5c1aacf4da8df09a0efe"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes/arm_link5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ea9544433d63402ba0502aaa83c839bec660e16c",
+      "size": 1363484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ea9544433d63402ba0502aaa83c839bec660e16c"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes/arm_link6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4e241181f838fbbd4ad569b5630e0b8a89509d51",
+      "size": 1171684,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/4e241181f838fbbd4ad569b5630e0b8a89509d51"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/meshes/base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e30fc694294561374f0cae2e63b6c8cef7070e8b",
+      "size": 410384,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/e30fc694294561374f0cae2e63b6c8cef7070e8b"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/package.xml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f5eee1ff03150327cfe703661c9b6b7eeb444d07",
+      "size": 654,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f5eee1ff03150327cfe703661c9b6b7eeb444d07"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/urdf",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "26abf3f2915f83866071f45842314247cea2c8b9",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/26abf3f2915f83866071f45842314247cea2c8b9"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/urdf/.DS_Store",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "958e018caafe25ffc3957f0bae7b802ba2e566ec",
+      "size": 6148,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/958e018caafe25ffc3957f0bae7b802ba2e566ec"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/urdf/A1Z_Flange.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "27cfc2db012eed95a847f409c416a04dfdeb3c30",
+      "size": 8794,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/27cfc2db012eed95a847f409c416a04dfdeb3c30"
+    },
+    {
+      "path": "A1Z/A1Z_Flange/urdf/A1Z_nogripper.csv",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f08dc0d5bbf8b73335e7e7acdd7064a9a7a4bdfc",
+      "size": 3341,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f08dc0d5bbf8b73335e7e7acdd7064a9a7a4bdfc"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c00285ddff63efd7d4d2ba4cbe11bc327666f669",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/c00285ddff63efd7d4d2ba4cbe11bc327666f669"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/.DS_Store",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "80f705c5eb368f1a313062c3218c7abfcf521b22",
+      "size": 6148,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/80f705c5eb368f1a313062c3218c7abfcf521b22"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/CMakeLists.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "81c598218b46e5532c4970142117053d02bcc097",
+      "size": 285,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/81c598218b46e5532c4970142117053d02bcc097"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/config",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "2bc71e97b9390e8dd0865f72e3517b3e28229752",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/2bc71e97b9390e8dd0865f72e3517b3e28229752"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/config/joint_names_A1Z_nogripper.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ec45f959e44b3dbdca2728c0dfddc9eeea8c6211",
+      "size": 116,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ec45f959e44b3dbdca2728c0dfddc9eeea8c6211"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/export.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fc94cba004e63a3d88cbf25a9245ecab4269e70c",
+      "size": 538014,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/fc94cba004e63a3d88cbf25a9245ecab4269e70c"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/launch",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "47d0d527e14cc9970ee1df18e31f30bcf835cccb",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/47d0d527e14cc9970ee1df18e31f30bcf835cccb"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/launch/display.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fdd67e6f3272cb180705fb48bd517d516d6d805d",
+      "size": 500,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/fdd67e6f3272cb180705fb48bd517d516d6d805d"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/launch/gazebo.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8b3791ebbb6f7c48e11d6fe3eae34df8af9bf07",
+      "size": 567,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f8b3791ebbb6f7c48e11d6fe3eae34df8af9bf07"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "fc036a33ebcb6af192ab9e24c16499c0b8f6645a",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/fc036a33ebcb6af192ab9e24c16499c0b8f6645a"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/arm_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2ee5c325c65df54baf87995f0518c30ae268d45",
+      "size": 704484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/b2ee5c325c65df54baf87995f0518c30ae268d45"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/arm_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "975f9a6906653b7c5436dec6b13f00547e1aa46d",
+      "size": 1593784,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/975f9a6906653b7c5436dec6b13f00547e1aa46d"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/arm_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "71e06b8be8bdc90cc328a60474645361b91c67c1",
+      "size": 1835984,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/71e06b8be8bdc90cc328a60474645361b91c67c1"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/arm_link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "80804480f51134cb2d7a5c1aacf4da8df09a0efe",
+      "size": 1236084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/80804480f51134cb2d7a5c1aacf4da8df09a0efe"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/arm_link5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ea9544433d63402ba0502aaa83c839bec660e16c",
+      "size": 1363484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ea9544433d63402ba0502aaa83c839bec660e16c"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/arm_link6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7e92415e8bf7a65a45d76e761b75bb62ef530eb6",
+      "size": 639584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/7e92415e8bf7a65a45d76e761b75bb62ef530eb6"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e30fc694294561374f0cae2e63b6c8cef7070e8b",
+      "size": 410384,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/e30fc694294561374f0cae2e63b6c8cef7070e8b"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/gripper_finger_left_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f80ea04ed5060f692360bd501b8520b0f139f4aa",
+      "size": 343084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f80ea04ed5060f692360bd501b8520b0f139f4aa"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/meshes/gripper_finger_rIght_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "32ffddac8adce5f0250a1931bb85066b1ccc0e6e",
+      "size": 139184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/32ffddac8adce5f0250a1931bb85066b1ccc0e6e"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/package.xml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f5eee1ff03150327cfe703661c9b6b7eeb444d07",
+      "size": 654,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f5eee1ff03150327cfe703661c9b6b7eeb444d07"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/urdf",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "cfb5347baa516ec13004ad2c16e79f1d1133df29",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/cfb5347baa516ec13004ad2c16e79f1d1133df29"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/urdf/.DS_Store",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5008ddfcf53c02e82d7eee2e57c38e5672ef89f6",
+      "size": 6148,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/5008ddfcf53c02e82d7eee2e57c38e5672ef89f6"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/urdf/A1Z_G1Z.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ef6d655537ab20cc83438d0c82d11faa24f016d9",
+      "size": 10908,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/ef6d655537ab20cc83438d0c82d11faa24f016d9"
+    },
+    {
+      "path": "A1Z/A1Z_G1Z/urdf/A1Z_nogripper.csv",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f08dc0d5bbf8b73335e7e7acdd7064a9a7a4bdfc",
+      "size": 3341,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f08dc0d5bbf8b73335e7e7acdd7064a9a7a4bdfc"
+    },
+    {
+      "path": "R1",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ba96e0f3aceedc436c046c1f280f5318e2bf5335",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/ba96e0f3aceedc436c046c1f280f5318e2bf5335"
+    },
+    {
+      "path": "R1/.vscode",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9d818b49ebe5d918fd0a120a97ca2e9cb3551789",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/9d818b49ebe5d918fd0a120a97ca2e9cb3551789"
+    },
+    {
+      "path": "R1/.vscode/c_cpp_properties.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4b425532d157f759c13a204f762c0915489d67c7",
+      "size": 585,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/4b425532d157f759c13a204f762c0915489d67c7"
+    },
+    {
+      "path": "R1/.vscode/settings.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63cec371b6089b7bcca98675e724d062a7e3a1fb",
+      "size": 452,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/63cec371b6089b7bcca98675e724d062a7e3a1fb"
+    },
+    {
+      "path": "R1/CMakeLists.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1b4ed0765862b3e604279461ba591f87125913a8",
+      "size": 287,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/1b4ed0765862b3e604279461ba591f87125913a8"
+    },
+    {
+      "path": "R1/config",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "07a86d4649136241ad4ceef7ab35b118aae9fafc",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/07a86d4649136241ad4ceef7ab35b118aae9fafc"
+    },
+    {
+      "path": "R1/config/joint_names_r1_v2_1_0.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b8abe87d2abf93606ab1496f9d601cf3d173848c",
+      "size": 584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/b8abe87d2abf93606ab1496f9d601cf3d173848c"
+    },
+    {
+      "path": "R1/export.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9aea7bf781a18f86f7ac14933effa04b5a12f645",
+      "size": 567906,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/9aea7bf781a18f86f7ac14933effa04b5a12f645"
+    },
+    {
+      "path": "R1/launch",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c1e0478fbea7b9b7380084166bfa029c5a9186db",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/c1e0478fbea7b9b7380084166bfa029c5a9186db"
+    },
+    {
+      "path": "R1/launch/display.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "409a9bf36e2db1e45b770f3d7f9a5d36094e37f4",
+      "size": 488,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/409a9bf36e2db1e45b770f3d7f9a5d36094e37f4"
+    },
+    {
+      "path": "R1/launch/gazebo.launch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "13897444e7e3135d3d13d8094af60fec41f468ba",
+      "size": 555,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/13897444e7e3135d3d13d8094af60fec41f468ba"
+    },
+    {
+      "path": "R1/meshes",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "7844d57a7aad8901c331f666e625ea847a40f2db",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/7844d57a7aad8901c331f666e625ea847a40f2db"
+    },
+    {
+      "path": "R1/meshes/base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fd1955e8fbfcd2e04d9362f334eab7173230ca3c",
+      "size": 7784784,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/fd1955e8fbfcd2e04d9362f334eab7173230ca3c"
+    },
+    {
+      "path": "R1/meshes/left_arm_base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "80ac054139932900b37ff799f06870f8fc6458ea",
+      "size": 650684,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/80ac054139932900b37ff799f06870f8fc6458ea"
+    },
+    {
+      "path": "R1/meshes/left_arm_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dc5e6576f13b159950fada0a0d809aea2458d57b",
+      "size": 3816984,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/dc5e6576f13b159950fada0a0d809aea2458d57b"
+    },
+    {
+      "path": "R1/meshes/left_arm_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a109ac9fd89fffcd954ea6945b0fca1850d29feb",
+      "size": 578484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/a109ac9fd89fffcd954ea6945b0fca1850d29feb"
+    },
+    {
+      "path": "R1/meshes/left_arm_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "77cb5ad4e7e9a491ea2ecc5d962bf2d8900fd5c8",
+      "size": 2073534,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/77cb5ad4e7e9a491ea2ecc5d962bf2d8900fd5c8"
+    },
+    {
+      "path": "R1/meshes/left_arm_link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e0526074d7424f5326576164b5b539373b6b1985",
+      "size": 265184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/e0526074d7424f5326576164b5b539373b6b1985"
+    },
+    {
+      "path": "R1/meshes/left_arm_link5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "891634be560cab6d2c55e94372bb8d60c7905075",
+      "size": 325484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/891634be560cab6d2c55e94372bb8d60c7905075"
+    },
+    {
+      "path": "R1/meshes/left_arm_link6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "25833a03c5088e7ad65be5cb69e490935dc605b0",
+      "size": 16284,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/25833a03c5088e7ad65be5cb69e490935dc605b0"
+    },
+    {
+      "path": "R1/meshes/left_gripper_finger_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f3eadee561f41ad9d19a13a3574795af02dac75",
+      "size": 260584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/6f3eadee561f41ad9d19a13a3574795af02dac75"
+    },
+    {
+      "path": "R1/meshes/left_gripper_finger_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f30641cba8b59ef8e9bfeb94bba2d7e1dc7c6699",
+      "size": 260584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f30641cba8b59ef8e9bfeb94bba2d7e1dc7c6699"
+    },
+    {
+      "path": "R1/meshes/left_gripper_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "992b41f85bede1f8467fd6bb6304545aa553f183",
+      "size": 132584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/992b41f85bede1f8467fd6bb6304545aa553f183"
+    },
+    {
+      "path": "R1/meshes/left_realsense_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e19ecaf73173b8f08749ec7fe13d9e954405d95",
+      "size": 653184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/2e19ecaf73173b8f08749ec7fe13d9e954405d95"
+    },
+    {
+      "path": "R1/meshes/right_arm_base_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3201bd2d2dde221f50a8664e4c7d7ce3ba950680",
+      "size": 650684,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/3201bd2d2dde221f50a8664e4c7d7ce3ba950680"
+    },
+    {
+      "path": "R1/meshes/right_arm_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "340c555faf814236d5f36cab9f3a3ce103601a07",
+      "size": 3816984,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/340c555faf814236d5f36cab9f3a3ce103601a07"
+    },
+    {
+      "path": "R1/meshes/right_arm_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "349f8cfb787d502cb2c8d16accf30a5e969df3be",
+      "size": 578484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/349f8cfb787d502cb2c8d16accf30a5e969df3be"
+    },
+    {
+      "path": "R1/meshes/right_arm_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "31526cff89d48800f822075fe3839114d4f39b7f",
+      "size": 2073534,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/31526cff89d48800f822075fe3839114d4f39b7f"
+    },
+    {
+      "path": "R1/meshes/right_arm_link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "302a7c37ff6df89392e8309074e992e9a396a8ab",
+      "size": 265184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/302a7c37ff6df89392e8309074e992e9a396a8ab"
+    },
+    {
+      "path": "R1/meshes/right_arm_link5.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f4a9764baf688c537ce689135afc808348015838",
+      "size": 325484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f4a9764baf688c537ce689135afc808348015838"
+    },
+    {
+      "path": "R1/meshes/right_arm_link6.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "327d62068bef35caa2fcadd609b5bee53721e2b5",
+      "size": 16284,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/327d62068bef35caa2fcadd609b5bee53721e2b5"
+    },
+    {
+      "path": "R1/meshes/right_gripper_finger_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f30641cba8b59ef8e9bfeb94bba2d7e1dc7c6699",
+      "size": 260584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f30641cba8b59ef8e9bfeb94bba2d7e1dc7c6699"
+    },
+    {
+      "path": "R1/meshes/right_gripper_finger_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f3eadee561f41ad9d19a13a3574795af02dac75",
+      "size": 260584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/6f3eadee561f41ad9d19a13a3574795af02dac75"
+    },
+    {
+      "path": "R1/meshes/right_gripper_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "992b41f85bede1f8467fd6bb6304545aa553f183",
+      "size": 132584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/992b41f85bede1f8467fd6bb6304545aa553f183"
+    },
+    {
+      "path": "R1/meshes/right_realsense_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d4b3d227d90e8c0f7f77fd72da868a1986caa61f",
+      "size": 653184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/d4b3d227d90e8c0f7f77fd72da868a1986caa61f"
+    },
+    {
+      "path": "R1/meshes/steer_motor_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b13f352819cfa0cc3104360033cecb1870e3edfe",
+      "size": 429184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/b13f352819cfa0cc3104360033cecb1870e3edfe"
+    },
+    {
+      "path": "R1/meshes/steer_motor_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a0af414cb3d44c9bda0aee4a3496958e7a461d36",
+      "size": 428584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/a0af414cb3d44c9bda0aee4a3496958e7a461d36"
+    },
+    {
+      "path": "R1/meshes/steer_motor_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "55b47d0ba3bcf37499b133b3c29e9cb17cbb78d1",
+      "size": 428584,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/55b47d0ba3bcf37499b133b3c29e9cb17cbb78d1"
+    },
+    {
+      "path": "R1/meshes/torso_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "60924dd85088711424615221fe5588cd47302536",
+      "size": 1322084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/60924dd85088711424615221fe5588cd47302536"
+    },
+    {
+      "path": "R1/meshes/torso_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6618f0a6f4078675dd901720813c086c546ab70e",
+      "size": 729834,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/6618f0a6f4078675dd901720813c086c546ab70e"
+    },
+    {
+      "path": "R1/meshes/torso_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fed3fcf97f193dd3696d95d4dd6ef6480c7db683",
+      "size": 565184,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/fed3fcf97f193dd3696d95d4dd6ef6480c7db683"
+    },
+    {
+      "path": "R1/meshes/torso_link4.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e7f80bd7141756fbd27da6d7dbb27979b820d741",
+      "size": 199884,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/e7f80bd7141756fbd27da6d7dbb27979b820d741"
+    },
+    {
+      "path": "R1/meshes/wheel_motor_link1.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "648f08c904bafbf32ab353d19093d68abe24f25c",
+      "size": 891084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/648f08c904bafbf32ab353d19093d68abe24f25c"
+    },
+    {
+      "path": "R1/meshes/wheel_motor_link2.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "182f5bd6edb14634bd28520ea75a9eab90dab599",
+      "size": 891084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/182f5bd6edb14634bd28520ea75a9eab90dab599"
+    },
+    {
+      "path": "R1/meshes/wheel_motor_link3.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d67c32009211a437b00ebd1d8674e9c5e7ca96b2",
+      "size": 891084,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/d67c32009211a437b00ebd1d8674e9c5e7ca96b2"
+    },
+    {
+      "path": "R1/meshes/zed_link.STL",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0e30009c9422d440e72cdee4ca4c6f37ed43dab7",
+      "size": 405484,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/0e30009c9422d440e72cdee4ca4c6f37ed43dab7"
+    },
+    {
+      "path": "R1/package.xml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f17d29356e0e043dca96a8dc0faa814018b637bd",
+      "size": 642,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/f17d29356e0e043dca96a8dc0faa814018b637bd"
+    },
+    {
+      "path": "R1/urdf",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "cce638452f2c5fd1406d4001b614b80c1fbc21bb",
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/trees/cce638452f2c5fd1406d4001b614b80c1fbc21bb"
+    },
+    {
+      "path": "R1/urdf/r1_v2_1_0.csv",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6c592975be1787073accfba52cc8f7d3b1126e30",
+      "size": 18611,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/6c592975be1787073accfba52cc8f7d3b1126e30"
+    },
+    {
+      "path": "R1/urdf/r1_v2_1_0.urdf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1d13a5646db9233d0a78dd7cf883c365f436bca5",
+      "size": 43279,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/1d13a5646db9233d0a78dd7cf883c365f436bca5"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9f1a98e47151a3b21b8dba842476b5c1d8026d79",
+      "size": 161,
+      "url": "https://api.github.com/repos/userguide-galaxea/URDF/git/blobs/9f1a98e47151a3b21b8dba842476b5c1d8026d79"
+    }
+  ],
+  "truncated": false
+}
