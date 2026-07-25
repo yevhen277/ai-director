@@ -128,6 +128,15 @@ Output schema:
       "name": "shot name",
       "tech": "ESTABLISH | DOLLY IN | DOLLY OUT | ARC ORBIT | TOP SHOT | LOW ANGLE | TRUCK SWEEP | HOLD | RECOVER",
       "desc": "what this shot accomplishes",
+      "target": {{
+        "source_type": "object | face",
+        "identity": "detected object label or face identity",
+        "label": "object label, optional for faces",
+        "box": [x1,y1,x2,y2],
+        "confidence": 0.0
+      }},
+      "target_intent": "what this shot asks the arm to find or keep in frame",
+      "arm_action": "concrete timing and arm movement, e.g. 0-4s search cup from medium pose then push in",
       "keyframes": [
         [[j1,j2,j3,j4,j5,j6], time_seconds]
       ],
@@ -143,6 +152,11 @@ Rules:
 - You may receive an actual camera image. Use it to infer scene mood, lighting, subject placement, and whether the user's described subject is present.
 - The summary must mention what is actually visible in the image. If the requested subject or mood is not clearly visible, state that uncertainty and plan a cautious establish/search shot.
 - Use 2 to 5 shots, total duration <= {max_duration_seconds:.1f} seconds.
+- Each shot may target at most one object or face. The robot arm can search for only one item at a time.
+- For every shot, set target to exactly one detected object/face or null. Never include an array of targets.
+- If target is not null, source_type must be "object" or "face", identity must match a real detected object label or face identity from vision_context, and box must copy that detection's box coordinates.
+- If the requested subject is not clearly detected, set target to null and make the shot a cautious search/establish shot.
+- target_intent and arm_action must be human-readable and match the user's language. arm_action must mention the shot time range and describe how the arm/camera moves.
 - First keyframe of the first shot should usually be "home".
 - Adjacent shots must connect smoothly: first keyframe of a shot should equal the previous shot's last pose at the same time.
 - Each joint array has exactly 6 radians.
@@ -264,6 +278,9 @@ def _validate_plan(plan: dict[str, Any], max_duration_seconds: float) -> dict[st
                 "name": str(shot.get("name") or f"Shot {shot_index + 1}")[:80],
                 "tech": str(shot.get("tech") or "HOLD")[:40],
                 "desc": str(shot.get("desc") or "")[:240],
+                "target": _normalize_shot_target(shot.get("target")),
+                "target_intent": str(shot.get("target_intent") or "")[:180],
+                "arm_action": str(shot.get("arm_action") or "")[:260],
                 "keyframes": validated_keyframes,
                 "t0": round(t0, 3),
                 "t1": round(t1, 3),
@@ -336,6 +353,48 @@ def _pose_for_tech(tech: str, shot_index: int) -> list[float]:
 
 def _is_keyframe_like(frame: Any) -> bool:
     return isinstance(frame, list | tuple) and len(frame) == 2
+
+
+def _normalize_shot_target(target: Any) -> dict[str, Any] | None:
+    if not isinstance(target, dict):
+        return None
+
+    source_type = str(target.get("source_type") or "").strip().lower()
+    if source_type not in {"object", "face"}:
+        return None
+
+    identity = str(target.get("identity") or "").strip()
+    if not identity:
+        return None
+
+    box = _normalize_target_box(target.get("box"))
+    if box is None:
+        return None
+
+    normalized: dict[str, Any] = {
+        "source_type": source_type,
+        "identity": identity[:120],
+        "box": box,
+    }
+    label = str(target.get("label") or "").strip()
+    if label:
+        normalized["label"] = label[:120]
+    confidence = _finite_float(target.get("confidence"))
+    if confidence is not None:
+        normalized["confidence"] = max(0.0, min(1.0, confidence))
+    return normalized
+
+
+def _normalize_target_box(box: Any) -> list[int] | None:
+    if not isinstance(box, list | tuple) or len(box) != 4:
+        return None
+    values: list[int] = []
+    for value in box:
+        number = _finite_float(value)
+        if number is None:
+            return None
+        values.append(int(round(number)))
+    return values
 
 
 def _finite_float(value: Any) -> float | None:
