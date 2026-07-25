@@ -5,7 +5,7 @@ import json
 import math
 import time
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
 
 JointUnit = Literal["deg", "rad"]
@@ -43,6 +43,11 @@ class JointFrame:
                 "age_ms": round(age_ms, 1),
             },
         }
+
+
+class _Subscriber(NamedTuple):
+    loop: asyncio.AbstractEventLoop
+    queue: asyncio.Queue[dict[str, Any]]
 
 
 def parse_joint_line(line: str, default_unit: JointUnit = "deg") -> JointFrame:
@@ -93,108 +98,73 @@ def parse_joint_line(line: str, default_unit: JointUnit = "deg") -> JointFrame:
     )
 
 
-class RobotJointReceiver:
-    def __init__(self, host: str, port: int, default_unit: JointUnit = "deg"):
-        self.host = host
-        self.port = port
+class RobotJointStateHub:
+    """Parse and broadcast joint feedback read from the existing robot TCP socket."""
+
+    def __init__(self, default_unit: JointUnit = "deg"):
         self.default_unit = default_unit
-        self.enabled = False
-        self.started_at: float | None = None
         self.last_frame: JointFrame | None = None
         self.last_error: str | None = None
-        self.client_count = 0
-        self._server: asyncio.AbstractServer | None = None
-        self._subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
-        self._lock = asyncio.Lock()
+        self.last_source: str | None = None
+        self._subscribers: set[_Subscriber] = set()
 
-    async def start(self) -> None:
-        if self._server is not None:
-            return
-        self.started_at = time.time()
+    def ingest_line(self, line: str, client: str | None = None, source: str = "tcp") -> JointFrame | None:
         try:
-            self._server = await asyncio.start_server(self._handle_client, self.host, self.port)
-        except OSError as exc:
-            self.last_error = f"Could not listen on {self.host}:{self.port}: {exc}"
-            self.enabled = False
-            return
-        self.enabled = True
-        self.last_error = None
+            frame = parse_joint_line(line, self.default_unit)
+            frame = JointFrame(
+                pos_rad=frame.pos_rad,
+                pos_deg=frame.pos_deg,
+                unit=frame.unit,
+                raw=frame.raw,
+                received_at=frame.received_at,
+                client=client,
+            )
+        except ValueError as exc:
+            self.last_error = str(exc)
+            self.last_source = source
+            return None
 
-    async def stop(self) -> None:
-        server = self._server
-        self._server = None
-        self.enabled = False
-        if server is not None:
-            server.close()
-            await server.wait_closed()
-        for queue in list(self._subscribers):
-            queue.put_nowait({"type": "robot_joints", "status": "stopped"})
+        self.last_frame = frame
+        self.last_error = None
+        self.last_source = source
+        self._publish(frame.to_payload())
+        return frame
 
     def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
+        loop = asyncio.get_running_loop()
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=8)
-        self._subscribers.add(queue)
+        subscriber = _Subscriber(loop=loop, queue=queue)
+        self._subscribers.add(subscriber)
         if self.last_frame is not None:
             queue.put_nowait(self.last_frame.to_payload())
         return queue
 
     def unsubscribe(self, queue: asyncio.Queue[dict[str, Any]]) -> None:
-        self._subscribers.discard(queue)
+        self._subscribers = {subscriber for subscriber in self._subscribers if subscriber.queue is not queue}
 
     def status(self) -> dict[str, Any]:
         frame = self.last_frame
         return {
-            "enabled": self.enabled,
-            "host": self.host,
-            "port": self.port,
+            "enabled": True,
+            "transport": "existing_tcp_socket",
             "default_unit": self.default_unit,
-            "started_at": self.started_at,
-            "client_count": self.client_count,
+            "last_source": self.last_source,
             "last_error": self.last_error,
             "latest": frame.to_payload()["data"] if frame is not None else None,
         }
 
-    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        peer = writer.get_extra_info("peername")
-        client = f"{peer[0]}:{peer[1]}" if isinstance(peer, tuple) and len(peer) >= 2 else str(peer or "unknown")
-        self.client_count += 1
-        try:
-            while True:
-                data = await reader.readline()
-                if not data:
-                    break
-                line = data.decode("utf-8", errors="replace").strip()
-                try:
-                    frame = parse_joint_line(line, self.default_unit)
-                    frame = JointFrame(
-                        pos_rad=frame.pos_rad,
-                        pos_deg=frame.pos_deg,
-                        unit=frame.unit,
-                        raw=frame.raw,
-                        received_at=frame.received_at,
-                        client=client,
-                    )
-                    async with self._lock:
-                        self.last_frame = frame
-                        self.last_error = None
-                    self._publish(frame.to_payload())
-                except ValueError as exc:
-                    self.last_error = str(exc)
-        finally:
-            self.client_count = max(0, self.client_count - 1)
-            writer.close()
-            try:
-                await writer.wait_closed()
-            except OSError:
-                pass
-
     def _publish(self, payload: dict[str, Any]) -> None:
-        for queue in list(self._subscribers):
-            if queue.full():
-                try:
-                    queue.get_nowait()
-                except asyncio.QueueEmpty:
-                    pass
-            queue.put_nowait(payload)
+        for subscriber in list(self._subscribers):
+            subscriber.loop.call_soon_threadsafe(_offer_latest, subscriber.queue, payload)
+
+
+def _offer_latest(queue: asyncio.Queue[dict[str, Any]], payload: dict[str, Any]) -> None:
+    if queue.full():
+        try:
+            queue.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+    queue.put_nowait(payload)
 
 
 def _parse_unit(value: Any, default_unit: JointUnit) -> JointUnit:

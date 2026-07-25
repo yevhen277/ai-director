@@ -13,8 +13,10 @@ from typing import Iterable, Literal
 import cv2
 
 from app.camera import OpenCVCamera, OrbbecColorCamera
+from app.config import settings
 from app.detector import YoloDetector, draw_detections
 from app.face_recognition import FaceRecognitionService, draw_face_matches, recognition_result_to_dict
+from app.robot_joint_receiver import RobotJointStateHub
 from app.tcp_sender import (
     TcpJsonLineClient,
     TcpTarget,
@@ -68,6 +70,9 @@ class CameraRunConfig:
     tcp_face_timeout_seconds: float = 0.2
     tcp_face_send_fps: int = 10
     tcp_face_track_ttl_seconds: float = 1.0
+
+
+robot_joint_state_hub = RobotJointStateHub(default_unit=settings.robot_joint_tcp_default_unit)
 
 
 class CameraRunConflictError(RuntimeError):
@@ -839,14 +844,26 @@ class CameraRun:
                 self.config.tcp_face_timeout_seconds,
                 max(0.01, 0.5 / self.config.tcp_face_send_fps),
             )
+            target = TcpTarget(
+                host=self.config.tcp_face_host,
+                port=self.config.tcp_face_port,
+                timeout_seconds=timeout_seconds,
+            )
             self._tcp_face_client = TcpJsonLineClient(
-                TcpTarget(
-                    host=self.config.tcp_face_host,
-                    port=self.config.tcp_face_port,
-                    timeout_seconds=timeout_seconds,
-                )
+                target,
+                on_line=lambda line: self._handle_tcp_joint_line(line, target),
             )
         return self._tcp_face_client
+
+    def _handle_tcp_joint_line(self, line: str, target: TcpTarget) -> None:
+        client = f"{target.host}:{target.port}"
+        frame = robot_joint_state_hub.ingest_line(line, client=client, source="tcp_face_socket")
+        if frame is None:
+            return
+        with self._lock:
+            joint_payload = frame.to_payload()["data"]
+            if self.latest_sample is not None:
+                self.latest_sample["robot_joints"] = joint_payload
 
     def _close_tcp_face_client(self) -> None:
         if self._tcp_face_client is None:

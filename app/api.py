@@ -4,7 +4,7 @@ import os
 import tempfile
 import asyncio
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
@@ -21,6 +21,7 @@ from app.camera_runs import (
     CameraRunNotFoundError,
     CameraRunRecordingError,
     CameraRunValidationError,
+    robot_joint_state_hub,
 )
 from app.config import settings
 from app.detector import YoloDetector, load_image
@@ -36,7 +37,6 @@ from app.face_recognition import (
     registered_to_dict,
 )
 from app.labels import resolve_target_classes
-from app.robot_joint_receiver import JointUnit, RobotJointReceiver
 from app.vision import run_yolo_detection
 
 
@@ -66,24 +66,6 @@ face_service = FaceRecognitionService(
     model_name=settings.face_model,
 )
 camera_run_manager = CameraRunManager(detector=detector, face_service=face_service)
-robot_joint_receiver = RobotJointReceiver(
-    host=settings.robot_joint_tcp_host,
-    port=settings.robot_joint_tcp_port,
-    default_unit=cast(JointUnit, settings.robot_joint_tcp_default_unit),
-)
-
-
-@app.on_event("startup")
-async def start_robot_joint_receiver() -> None:
-    if settings.robot_joint_tcp_enabled:
-        await robot_joint_receiver.start()
-
-
-@app.on_event("shutdown")
-async def stop_robot_joint_receiver() -> None:
-    await robot_joint_receiver.stop()
-
-
 class CameraAimRequest(BaseModel):
     camera_source: Literal["orbbec", "opencv"] = settings.default_camera_source
     camera_index: int = settings.default_camera_index
@@ -453,15 +435,15 @@ def select_camera_run_tcp_target(run_id: str, request: CameraRunTcpTargetRequest
 
 @app.get("/robot/joints/status")
 def robot_joints_status() -> dict:
-    return robot_joint_receiver.status()
+    return robot_joint_state_hub.status()
 
 
 @app.websocket("/robot/joints.ws")
 async def robot_joints_ws(websocket: WebSocket):
     await websocket.accept()
-    queue = robot_joint_receiver.subscribe()
+    queue = robot_joint_state_hub.subscribe()
     try:
-        await websocket.send_json({"type": "robot_joints", "status": "connected", "data": robot_joint_receiver.status()})
+        await websocket.send_json({"type": "robot_joints", "status": "connected", "data": robot_joint_state_hub.status()})
         while True:
             payload = await queue.get()
             await websocket.send_json(payload)
@@ -470,7 +452,7 @@ async def robot_joints_ws(websocket: WebSocket):
     except WebSocketDisconnect:
         return
     finally:
-        robot_joint_receiver.unsubscribe(queue)
+        robot_joint_state_hub.unsubscribe(queue)
         try:
             await websocket.close()
         except RuntimeError:

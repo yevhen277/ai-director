@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import math
+import socket
+import threading
 import unittest
 
 from app.robot_joint_receiver import parse_joint_line
+from app.tcp_sender import TcpJsonLineClient, TcpTarget
 
 
 class RobotJointReceiverParsingTest(unittest.TestCase):
@@ -51,3 +54,32 @@ class RobotJointReceiverParsingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TcpJsonLineClientReadbackTest(unittest.TestCase):
+    def test_reads_line_from_same_socket_used_for_send(self) -> None:
+        received_payload = []
+        received_lines = []
+        ready = threading.Event()
+
+        def server(listener: socket.socket) -> None:
+            ready.set()
+            conn, _ = listener.accept()
+            with conn:
+                received_payload.append(conn.recv(4096))
+                conn.sendall(b'{"pos_deg":[0,60,-60,0,0,0]}\n')
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(1)
+            port = listener.getsockname()[1]
+            thread = threading.Thread(target=server, args=(listener,), daemon=True)
+            thread.start()
+            self.assertTrue(ready.wait(1.0))
+            client = TcpJsonLineClient(TcpTarget("127.0.0.1", port, 1.0), on_line=received_lines.append)
+            client.send({"status": "home"})
+            thread.join(1.0)
+            client.close()
+
+        self.assertIn(b'{"status":"home"}', received_payload[0])
+        self.assertEqual(received_lines, ['{"pos_deg":[0,60,-60,0,0,0]}'])
