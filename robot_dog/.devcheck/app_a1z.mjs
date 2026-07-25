@@ -922,7 +922,7 @@ function renderPlanCard(plan) {
       + '<div class="idx">' + (i + 1) + '</div>'
       + '<div class="body"><div class="name">' + sh.name + '<span class="tech">' + sh.tech + '</span></div>'
       + '<div class="desc">' + sh.desc + '</div>'
-      + '<div class="params">' + (sh.t1 - sh.t0).toFixed(1) + 's · ' + sh.keyframes.length + ' keyframes · smooth</div></div>'
+      + '<div class="params">时长:' + (sh.t1 - sh.t0).toFixed(1) + 's · 关键帧:' + sh.keyframes.length + '(关键姿态点,决定运动精度) · 平滑插值:启用(确保运动流畅,避免抖动)</div></div>'
       + '<div class="st">Queued</div></div>';
   });
   wrap.innerHTML = '<div class="who">DirectorX AI · Shot Plan</div>'

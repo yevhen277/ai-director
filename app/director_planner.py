@@ -126,7 +126,7 @@ Return JSON only. No markdown.
 
 Business goal:
 - Convert the user's desired visual effect and the current camera detection context into an executable shot plan.
-- The frontend will convert your keyframes to A1Z move commands, so every keyframe must be safe and numeric.
+- The backend will convert your high-level shot timing and TCP state into safe A1Z move commands.
 
 Output schema:
 {{
@@ -147,9 +147,6 @@ Output schema:
       "target_intent": "what this shot asks the arm to find or keep in frame",
       "tcp_status": "home | far | find",
       "arm_action": "concrete timing and arm movement, e.g. 0-4s search cup from medium pose then push in",
-      "keyframes": [
-        [[j1,j2,j3,j4,j5,j6], time_seconds]
-      ],
       "t0": 0.0,
       "t1": 3.0
     }}
@@ -158,7 +155,7 @@ Output schema:
 
 Rules:
 - Match the user's language for all human-readable planning text: title, summary, shot name, and desc.
-- Keep machine-readable fields unchanged: tech must use only ESTABLISH, FIND, FAR, or HOME. keyframes/t0/t1 must remain numeric.
+- Keep machine-readable fields unchanged: tech must use only ESTABLISH, FIND, FAR, or HOME. t0/t1 must remain numeric.
 - You may receive an actual camera image. Use it to infer scene mood, lighting, subject placement, and whether the user's described subject is present.
 - The summary must mention what is actually visible in the image. If the requested subject or mood is not clearly visible, state that uncertainty and plan a cautious establish/search shot.
 - Use 2 to 5 shots, total duration <= {max_duration_seconds:.1f} seconds.
@@ -176,11 +173,6 @@ Rules:
 - For face targets, target.identity must exactly equal one of available_targets.faces[].identity values, and box must copy that same target's box coordinates.
 - If the requested subject is not clearly detected, set target to null and make the shot a cautious search/establish shot.
 - target_intent and arm_action must be human-readable and match the user's language. arm_action must mention the shot time range and describe only home/far/find actions. Do not describe circling, orbiting, surrounding, sweeping, pushing in, pulling out, high angle, low angle, or any unsupported movement.
-- First keyframe of the first shot should usually be "home".
-- Adjacent shots must connect smoothly: first keyframe of a shot should equal the previous shot's last pose at the same time.
-- Each joint array has exactly 6 radians.
-- Joint limits are: {JOINT_LIMITS}
-- Compose only from these named poses or their exact numeric joint arrays: {json.dumps(PLANNER_STATES)}
 - If vision context says no person/face/object is visible, create a cautious search or establish plan and mention the uncertainty.
 - If a known face identity is present, make that person the subject.
 - Do not invent hardware commands, only return the ShotPlan JSON.
