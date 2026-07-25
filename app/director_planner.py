@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import math
@@ -39,6 +39,11 @@ SAFE_POSES = {
     "orbR2": [0.817, 0.000, -0.767, 1.309, -0.677, 2.007],
     "swpA": [0.357, 0.211, -0.983, 1.309, -0.285, 1.737],
     "swpB": [-0.358, 0.210, -0.982, 1.309, 0.286, 1.405],
+}
+
+PLANNER_STATES = {
+    "home": SAFE_POSES["home"],
+    "far": SAFE_POSES["far"],
 }
 
 
@@ -126,7 +131,7 @@ Output schema:
   "shots": [
     {{
       "name": "shot name",
-      "tech": "ESTABLISH | DOLLY IN | DOLLY OUT | ARC ORBIT | TOP SHOT | LOW ANGLE | TRUCK SWEEP | HOLD | RECOVER",
+      "tech": "ESTABLISH | FIND | FAR | HOME",
       "desc": "what this shot accomplishes",
       "target": {{
         "source_type": "object | face",
@@ -136,6 +141,7 @@ Output schema:
         "confidence": 0.0
       }},
       "target_intent": "what this shot asks the arm to find or keep in frame",
+      "tcp_status": "home | far | find",
       "arm_action": "concrete timing and arm movement, e.g. 0-4s search cup from medium pose then push in",
       "keyframes": [
         [[j1,j2,j3,j4,j5,j6], time_seconds]
@@ -148,20 +154,26 @@ Output schema:
 
 Rules:
 - Match the user's language for all human-readable planning text: title, summary, shot name, and desc.
-- Keep machine-readable fields unchanged: tech must use the enum labels, keyframes/t0/t1 must remain numeric.
+- Keep machine-readable fields unchanged: tech must use only ESTABLISH, FIND, FAR, or HOME. keyframes/t0/t1 must remain numeric.
 - You may receive an actual camera image. Use it to infer scene mood, lighting, subject placement, and whether the user's described subject is present.
 - The summary must mention what is actually visible in the image. If the requested subject or mood is not clearly visible, state that uncertainty and plan a cautious establish/search shot.
 - Use 2 to 5 shots, total duration <= {max_duration_seconds:.1f} seconds.
+- The only allowed robot/TCP states and named robot poses are exactly: "home", "far", and "find".
+- Do not mention or output any other robot state, pose, location, shot type, camera move, or posture name such as close, low, top, arc, orbit, surround, circle, sweep, truck, insert, overhead, dolly-in pose, or macro pose.
+- Do not create cinematic movement shots such as ARC ORBIT, TOP SHOT, LOW ANGLE, TRUCK SWEEP, DOLLY IN, DOLLY OUT, push-in, pull-out, orbit, circle-around, surround, pan, tilt, or sweep. The arm only supports: find one object/face, move home, move far.
+- tcp_status must be exactly one of "home", "far", or "find". Use "find" whenever the shot searches for, locates, finds, or tracks an object/face, even if its tech is FAR or its numeric pose is near far. Use "far" only when the shot explicitly moves the arm from home to far or commands a far position without searching. Otherwise use "home".
+- If a shot both has a target and says it moves from home to far, tcp_status must be "far", not "find".
+- If a shot says "寻找/搜索/定位/find/search/locate chair" or similar, tcp_status must be "find" and target must be the searched object/face, such as chair.
 - Each shot may target at most one object or face. The robot arm can search for only one item at a time.
 - For every shot, set target to exactly one detected object/face or null. Never include an array of targets.
 - If target is not null, source_type must be "object" or "face", identity must match a real detected object label or face identity from vision_context, and box must copy that detection's box coordinates.
 - If the requested subject is not clearly detected, set target to null and make the shot a cautious search/establish shot.
-- target_intent and arm_action must be human-readable and match the user's language. arm_action must mention the shot time range and describe how the arm/camera moves.
+- target_intent and arm_action must be human-readable and match the user's language. arm_action must mention the shot time range and describe only home/far/find actions. Do not describe circling, orbiting, surrounding, sweeping, pushing in, pulling out, high angle, low angle, or any unsupported movement.
 - First keyframe of the first shot should usually be "home".
 - Adjacent shots must connect smoothly: first keyframe of a shot should equal the previous shot's last pose at the same time.
 - Each joint array has exactly 6 radians.
 - Joint limits are: {JOINT_LIMITS}
-- Prefer composing from these safe poses and small wrist yaw/roll adjustments: {json.dumps(SAFE_POSES)}
+- Compose only from these named poses or their exact numeric joint arrays: {json.dumps(PLANNER_STATES)}
 - If vision context says no person/face/object is visible, create a cautious search or establish plan and mention the uncertainty.
 - If a known face identity is present, make that person the subject.
 - Do not invent hardware commands, only return the ShotPlan JSON.
@@ -276,10 +288,11 @@ def _validate_plan(plan: dict[str, Any], max_duration_seconds: float) -> dict[st
         validated_shots.append(
             {
                 "name": str(shot.get("name") or f"Shot {shot_index + 1}")[:80],
-                "tech": str(shot.get("tech") or "HOLD")[:40],
+                "tech": _normalize_tech(shot, validated_keyframes),
                 "desc": str(shot.get("desc") or "")[:240],
                 "target": _normalize_shot_target(shot.get("target")),
                 "target_intent": str(shot.get("target_intent") or "")[:180],
+                "tcp_status": _normalize_tcp_status(shot, validated_keyframes),
                 "arm_action": str(shot.get("arm_action") or "")[:260],
                 "keyframes": validated_keyframes,
                 "t0": round(t0, 3),
@@ -349,6 +362,62 @@ def _pose_for_tech(tech: str, shot_index: int) -> list[float]:
     if "RECOVER" in upper or "FINAL" in upper:
         return SAFE_POSES["home"]
     return SAFE_POSES["far" if shot_index == 0 else "home"]
+
+
+def _normalize_tech(shot: dict[str, Any], keyframes: list[list[Any]]) -> str:
+    status = _normalize_tcp_status(shot, keyframes)
+    if status == "far":
+        return "FAR"
+    if status == "find":
+        return "FIND"
+    raw_tech = str(shot.get("tech") or "").strip().upper()
+    if raw_tech == "ESTABLISH":
+        return "ESTABLISH"
+    return "HOME"
+
+
+def _normalize_tcp_status(shot: dict[str, Any], keyframes: list[list[Any]]) -> str:
+    raw_status = str(shot.get("tcp_status") or shot.get("state") or "").strip().lower()
+    text = " ".join(
+        str(shot.get(field) or "")
+        for field in ("name", "tech", "desc", "target_intent", "arm_action")
+    ).lower()
+    target = _normalize_shot_target(shot.get("target"))
+
+    if _text_mentions_far_destination(text):
+        return "far"
+    if _text_mentions_search_intent(text) or raw_status == "find" or target is not None:
+        return "find"
+    if raw_status == "far" or _last_pose_is_far(keyframes):
+        return "far"
+    if raw_status == "home":
+        return "home"
+    return "home"
+
+
+def _text_mentions_far_destination(text: str) -> bool:
+    return bool(
+        re.search(r"\b(to|toward|towards|into|end(?:s|ing)?\s+at|move(?:s|ing)?\s+to)\s+(?:the\s+)?far\b", text)
+        or re.search(r"\bhome\b.*\bfar\b", text)
+        or re.search(r"\u4ece\s*home\s*(?:\u4f4d\u7f6e)?\s*(?:\u7f13\u6162)?(?:\u79fb\u52a8|\u8fd0\u52a8|\u5230|\u81f3).*far\s*(?:\u4f4d\u7f6e)?", text)
+        or re.search(r"\u5230\s*far\s*(?:\u4f4d\u7f6e|\u72b6\u6001)?", text)
+    )
+
+
+def _text_mentions_search_intent(text: str) -> bool:
+    return bool(
+        re.search(r"\b(find|search|locate|track)\b", text)
+        or re.search(r"\u5bfb\u627e|\u641c\u7d22|\u5b9a\u4f4d|\u627e\u5230", text)
+    )
+
+
+def _last_pose_is_far(keyframes: list[list[Any]]) -> bool:
+    if not keyframes:
+        return False
+    q = keyframes[-1][0]
+    if not isinstance(q, list | tuple) or len(q) != 6:
+        return False
+    return sum(abs(float(value) - SAFE_POSES["far"][index]) for index, value in enumerate(q)) < 0.08
 
 
 def _is_keyframe_like(frame: Any) -> bool:

@@ -38,6 +38,15 @@ uvicorn app.api:app --host 127.0.0.1 --port 8000
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/health"
 ```
 
+查看当前 PowerShell 版本：
+
+```powershell
+$PSVersionTable.PSVersion
+```
+
+如果 `Major` 是 `7` 或更高，可以使用本文里的 `Invoke-RestMethod -Form` 上传文件写法。
+如果 `Major` 是 `5`，也就是 Windows PowerShell 5.1，上传文件时要用本文后面给出的 `curl.exe -F` 写法，因为 5.1 版的 `Invoke-RestMethod` 没有 `-Form` 参数。
+
 如果要让网页默认使用本机摄像头，确认 `.env` 里有：
 
 ```text
@@ -378,10 +387,12 @@ $sourceImage
 如果你想手动指定图片，也可以这样：
 
 ```powershell
-$sourceImage = "images\web_live\web_live-000002.jpg"
+$sourceImage = "images\orbbec_live\orbbec_live-001184.jpg"
 ```
 
 ### 第二步：检测这张图里有哪些人脸
+
+如果你用的是 PowerShell 7 或更高版本，可以这样上传图片：
 
 ```powershell
 $fullPath = (Resolve-Path $sourceImage).Path
@@ -390,6 +401,21 @@ $json = curl.exe -s `
   -X POST `
   --form "file=@$fullPath" `
   --form "annotate=true" `
+  "http://127.0.0.1:8000/faces/candidates"
+
+$candidates = $json | ConvertFrom-Json
+$candidates
+```
+
+如果你用的是 Windows PowerShell 5.1，`Invoke-RestMethod` 不支持 `-Form`，请用这个写法：
+
+```powershell
+$fullPath = (Resolve-Path $sourceImage).Path
+
+$json = curl.exe -s `
+  -X POST `
+  -F "file=@$fullPath" `
+  -F "annotate=true" `
   "http://127.0.0.1:8000/faces/candidates"
 
 $candidates = $json | ConvertFrom-Json
@@ -412,7 +438,7 @@ output_path
   "face_count": 1,
   "faces": [
     {
-      "face_id": "5f524e21-cf79-48ed-9ccb-f5072b0d7d3f",
+      "face_id": "1aefdc74-4df8-445b-add0-5a4fd191de6f",
       "confidence": 0.94,
       "box": [180, 90, 260, 210]
     }
@@ -428,13 +454,13 @@ output_path
 如果图片里只有一个人脸，可以直接取第一个：
 
 ```powershell
-$faceId = "d8a82c28-2e87-4ba1-975e-e3ec8c7d2daf"
+$faceId = @($candidates.faces)[0].face_id
 $faceId
 ```
 
-注意：`@($candidates.faces)[0]` 只是候选列表里的第一个人脸，不保证是置信度最高的人脸。
+?????@($candidates.faces)[0]` ??????????????????????????????????????????
 
-如果图片里有多个人脸，需要根据 `output_path` 里的框，选择对应的 `face_id`。也可以先打印候选脸列表：
+??????????????????????? `output_path` ???????????????????????`face_id`??????????????????????
 
 ```powershell
 $candidates.faces | Select-Object face_id, confidence, box
@@ -459,7 +485,7 @@ $faceId = "dd2878fc-c4ff-4087-a261-2e01a3dca91b"
 
 ```powershell
 $body = @{
-  identity = "yeyuanyuan"
+  identity = "zhangzhan"
   face_id = $faceId
   source_image = $sourceImage
 } | ConvertTo-Json -Compress
@@ -530,7 +556,7 @@ Invoke-RestMethod `
 
 PowerShell 的引号规则容易把 JSON 传坏。发送 JSON 请求时，建议用本文里的 `Invoke-RestMethod -Body $body -ContentType "application/json"`，不要直接手写一长串 `curl.exe --data-raw "{...}"`。
 
-上传图片这种 `multipart/form-data` 请求是例外。Windows PowerShell 5.1 的 `Invoke-RestMethod` 没有 `-Form` 参数，所以本文上传图片统一使用 `curl.exe --form`。
+但是上传图片这种 `multipart/form-data` 请求例外：如果你使用 Windows PowerShell 5.1，因为它没有 `Invoke-RestMethod -Form`，可以按本文固定人脸库注册部分的示例使用 `curl.exe -F`。
 
 ### 返回 409
 

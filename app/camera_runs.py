@@ -4,6 +4,7 @@ import threading
 import time
 import uuid
 import logging
+from datetime import datetime
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,7 @@ from app.vision import run_yolo_detection
 
 RunStatus = Literal["starting", "running", "stopping", "stopped", "error"]
 TcpTargetSource = Literal["object", "face"]
+TcpTargetStatus = Literal["home", "far", "find"]
 TCP_FACE_LOG_PATH = Path("Log") / "tcp_face_auto.log"
 tcp_face_logger = logging.getLogger("director.tcp_face")
 if not tcp_face_logger.handlers:
@@ -80,6 +82,10 @@ class CameraRunValidationError(ValueError):
     pass
 
 
+class CameraRunRecordingError(RuntimeError):
+    pass
+
+
 @dataclass
 class SelectedTcpTarget:
     source_type: TcpTargetSource
@@ -117,6 +123,7 @@ class CameraRun:
         self.run_name = _clean_run_name(config.name or f"{config.camera_source}_{self.run_id[:8]}")
         self.input_dir = image_dir / self.run_name
         self.output_dir = output_root / self.run_name
+        self.recording_dir = output_root / self.run_name / "recordings"
         self.camera_key = (config.camera_source, config.camera_index)
         self.status: RunStatus = "starting"
         self.started_at = time.time()
@@ -135,6 +142,7 @@ class CameraRun:
         self._stop_event = threading.Event()
         self._latest_frame = None
         self._latest_preview_jpeg: bytes | None = None
+        self._recording: dict | None = None
         self._box_payloads: deque[dict] = deque(maxlen=config.box_history_size)
         self._latest_box_payload: dict | None = None
         self._box_event_count = 0
@@ -143,6 +151,7 @@ class CameraRun:
         self._last_face_at: float | None = None
         self._latest_tcp_target_result: dict | None = None
         self._tcp_face_client: TcpJsonLineClient | None = None
+        self._tcp_status: TcpTargetStatus = "home"
         self._selected_tcp_target: SelectedTcpTarget | None = None
         self._tcp_face_last_send: dict | None = None
         self._last_tcp_face_warning_at = 0.0
@@ -202,6 +211,7 @@ class CameraRun:
                 "camera_index": self.config.camera_index,
                 "input_dir": str(self.input_dir),
                 "output_dir": str(self.output_dir),
+                "recording": self._recording_to_dict_locked(),
                 "max_saved_images": self.config.max_saved_images,
                 "frame_count": self.frame_count,
                 "preview_frame_count": self.preview_frame_count,
@@ -211,23 +221,111 @@ class CameraRun:
                 "stopped_at": self.stopped_at,
                 "error": self.error,
                 "latest_sample": self.latest_sample,
+                "tcp_status": self._tcp_status,
                 "tcp_target": self._selected_tcp_target.to_dict() if self._selected_tcp_target else None,
                 "tcp_target_send": self._tcp_face_last_send,
             }
 
+    def start_recording(self) -> dict:
+        with self._lock:
+            if self.status not in {"starting", "running"}:
+                raise CameraRunRecordingError("Camera run is not active")
+            if self._recording and self._recording.get("status") == "recording":
+                raise CameraRunRecordingError("A recording is already active")
+
+            recording_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
+            frames_dir = self.recording_dir / recording_id / "frames"
+            video_path = self.recording_dir / f"{self.run_name}-{recording_id}.mp4"
+            frames_dir.mkdir(parents=True, exist_ok=True)
+            self._recording = {
+                "id": recording_id,
+                "status": "recording",
+                "started_at": time.time(),
+                "stopped_at": None,
+                "frame_count": 0,
+                "width": None,
+                "height": None,
+                "fps": self.config.preview_fps,
+                "frames_dir": frames_dir,
+                "video_path": video_path,
+                "error": None,
+            }
+            return self._recording_to_dict_locked()
+
+    def stop_recording(self) -> dict:
+        with self._lock:
+            if not self._recording or self._recording.get("status") != "recording":
+                raise CameraRunRecordingError("No recording is active")
+            recording = self._recording
+            recording["status"] = "encoding"
+            recording["stopped_at"] = time.time()
+
+        try:
+            self._encode_recording(recording)
+        except Exception as exc:
+            with self._lock:
+                if self._recording is recording:
+                    recording["status"] = "error"
+                    recording["error"] = str(exc)
+                    return self._recording_to_dict_locked()
+            raise
+
+        with self._lock:
+            if self._recording is recording:
+                recording["status"] = "ready"
+                return self._recording_to_dict_locked()
+            return self._recording_to_dict_locked()
+
+    def recording_video_path(self, recording_id: str) -> Path | None:
+        with self._lock:
+            recording = self._recording
+            if not recording or recording.get("id") != recording_id:
+                return None
+            video_path = recording.get("video_path")
+            if recording.get("status") != "ready" or not video_path:
+                return None
+            return Path(video_path)
+
     def select_tcp_target(
         self,
-        source_type: TcpTargetSource,
-        identity: str,
-        box: tuple[int, int, int, int],
+        source_type: TcpTargetSource | None = None,
+        identity: str | None = None,
+        box: tuple[int, int, int, int] | None = None,
         label: str | None = None,
+        status: TcpTargetStatus = "find",
     ) -> dict:
-        identity = identity.strip()
+        if status not in {"home", "far", "find"}:
+            raise CameraRunValidationError("status must be 'home', 'far', or 'find'")
+
+        if status in {"home", "far"}:
+            with self._lock:
+                self._tcp_status = status
+                self._selected_tcp_target = None
+                self._latest_tcp_target_result = {
+                    "enabled": self.config.tcp_face_enabled,
+                    "status": status,
+                    "selected": None,
+                    "found": None,
+                    "box": None,
+                    "error": None,
+                }
+                if self.latest_sample is not None:
+                    self.latest_sample["tcp_target"] = self._latest_tcp_target_result
+            return {
+                "run_id": self.run_id,
+                "status": status,
+                "tcp_target": None,
+                "last_send": self._tcp_face_last_send,
+            }
+
+        identity = (identity or "").strip()
         label = label.strip() if label else None
         if not identity:
             raise CameraRunValidationError("identity cannot be empty")
         if source_type not in {"object", "face"}:
             raise CameraRunValidationError("source_type must be 'object' or 'face'")
+        if box is None:
+            raise CameraRunValidationError("box is required for find status")
 
         target = SelectedTcpTarget(
             source_type=source_type,
@@ -238,9 +336,11 @@ class CameraRun:
             selected_at=time.time(),
         )
         with self._lock:
+            self._tcp_status = "find"
             self._selected_tcp_target = target
             self._latest_tcp_target_result = {
                 "enabled": self.config.tcp_face_enabled,
+                "status": "find",
                 "selected": target.to_dict(),
                 "found": True,
                 "box": box,
@@ -250,6 +350,7 @@ class CameraRun:
                 self.latest_sample["tcp_target"] = self._latest_tcp_target_result
         return {
             "run_id": self.run_id,
+            "status": "find",
             "tcp_target": target.to_dict(),
             "last_send": self._tcp_face_last_send,
         }
@@ -264,6 +365,70 @@ class CameraRun:
                 return None
             output_path = self.latest_sample.get("output_path")
             return Path(output_path) if output_path else None
+
+    def _recording_to_dict_locked(self) -> dict | None:
+        if not self._recording:
+            return None
+        recording = self._recording
+        video_path = recording.get("video_path")
+        return {
+            "id": recording.get("id"),
+            "status": recording.get("status"),
+            "started_at": recording.get("started_at"),
+            "stopped_at": recording.get("stopped_at"),
+            "frame_count": recording.get("frame_count", 0),
+            "width": recording.get("width"),
+            "height": recording.get("height"),
+            "fps": recording.get("fps"),
+            "video_path": str(video_path) if video_path else None,
+            "error": recording.get("error"),
+        }
+
+    def _record_frame_if_active_locked(self, frame) -> None:
+        recording = self._recording
+        if not recording or recording.get("status") != "recording":
+            return
+        frame_count = int(recording.get("frame_count") or 0) + 1
+        frames_dir = Path(recording["frames_dir"])
+        frame_path = frames_dir / f"frame-{frame_count:06d}.jpg"
+        if not cv2.imwrite(str(frame_path), frame):
+            recording["status"] = "error"
+            recording["error"] = f"Could not write recording frame: {frame_path}"
+            return
+        height, width = frame.shape[:2]
+        recording["frame_count"] = frame_count
+        recording["width"] = width
+        recording["height"] = height
+
+    def _encode_recording(self, recording: dict) -> None:
+        frame_count = int(recording.get("frame_count") or 0)
+        if frame_count <= 0:
+            raise CameraRunRecordingError("Recording has no frames")
+
+        frames_dir = Path(recording["frames_dir"])
+        video_path = Path(recording["video_path"])
+        width = int(recording.get("width") or self.preview_width)
+        height = int(recording.get("height") or self.preview_height)
+        fps = max(1.0, float(recording.get("fps") or self.config.preview_fps))
+        video_path.parent.mkdir(parents=True, exist_ok=True)
+
+        writer = cv2.VideoWriter(str(video_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+        if not writer.isOpened():
+            raise CameraRunRecordingError(f"Could not open video writer: {video_path}")
+        try:
+            for index in range(1, frame_count + 1):
+                frame_path = frames_dir / f"frame-{index:06d}.jpg"
+                frame = cv2.imread(str(frame_path))
+                if frame is None:
+                    continue
+                if frame.shape[1] != width or frame.shape[0] != height:
+                    frame = cv2.resize(frame, (width, height))
+                writer.write(frame)
+        finally:
+            writer.release()
+
+        if not video_path.is_file() or video_path.stat().st_size <= 0:
+            raise CameraRunRecordingError(f"Could not create video: {video_path}")
 
     def is_active(self) -> bool:
         with self._lock:
@@ -359,6 +524,7 @@ class CameraRun:
                         self.preview_height = height
                         self._latest_frame = frame.copy()
                         self._latest_preview_jpeg = encoded.tobytes()
+                        self._record_frame_if_active_locked(frame)
                         self._frame_condition.notify_all()
 
                     next_frame_at += preview_interval
@@ -558,18 +724,20 @@ class CameraRun:
                         next_send_at = now + interval
                     continue
 
-                identity = send_state["identity"]
-                found = send_state["found"]
-                box = send_state["box"]
-                payload = build_vision_target_tcp_payload(identity=identity, found=found, box=box)
+                status = send_state["status"]
+                identity = send_state.get("identity") or ""
+                found = bool(send_state.get("found"))
+                box = send_state.get("box")
+                payload = build_vision_target_tcp_payload(identity=identity, found=found, box=box, status=status)
                 try:
                     self._tcp_face().send(payload)
                     with self._lock:
                         self._tcp_face_last_send = {
                             "sent": True,
-                            "source_type": send_state["source_type"],
-                            "identity": identity,
-                            "found": found,
+                            "status": status,
+                            "source_type": send_state.get("source_type"),
+                            "identity": identity or None,
+                            "found": send_state.get("found"),
                             "box": box,
                             "error": None,
                         }
@@ -577,21 +745,23 @@ class CameraRun:
                         if self.latest_sample is not None:
                             self.latest_sample["tcp_target"] = self._latest_tcp_target_result
                     tcp_face_logger.info(
-                        "sent target=%s:%s identity=%s found=%s box=%s",
+                        "sent target=%s:%s status=%s identity=%s found=%s box=%s",
                         self.config.tcp_face_host,
                         self.config.tcp_face_port,
+                        status,
                         identity,
-                        payload["found"],
-                        payload["box"],
+                        payload.get("found"),
+                        payload.get("box"),
                     )
                 except OSError as exc:
                     self._close_tcp_face_client()
                     with self._lock:
                         self._tcp_face_last_send = {
                             "sent": False,
-                            "source_type": send_state["source_type"],
-                            "identity": identity,
-                            "found": found,
+                            "status": status,
+                            "source_type": send_state.get("source_type"),
+                            "identity": identity or None,
+                            "found": send_state.get("found"),
                             "box": box,
                             "error": str(exc),
                         }
@@ -604,13 +774,14 @@ class CameraRun:
                         self._tcp_face_warning_count = 0
                         self._last_tcp_face_warning_at = time.monotonic()
                         tcp_face_logger.warning(
-                            "failed target=%s:%s attempts=%s identity=%s found=%s box=%s error=%s",
+                            "failed target=%s:%s attempts=%s status=%s identity=%s found=%s box=%s error=%s",
                             self.config.tcp_face_host,
                             self.config.tcp_face_port,
                             warning_count,
+                            status,
                             identity,
-                            payload["found"],
-                            payload["box"],
+                            payload.get("found"),
+                            payload.get("box"),
                             exc,
                         )
 
@@ -623,9 +794,12 @@ class CameraRun:
 
     def _resolve_selected_tcp_target(self) -> dict | None:
         with self._lock:
+            status = self._tcp_status
             target = self._selected_tcp_target
             sample = self.latest_sample
             latest_face_result = self._latest_face_result
+            if status in {"home", "far"}:
+                return {"status": status}
             if target is None:
                 return None
             target_box = target.latest_box or target.box
@@ -648,6 +822,7 @@ class CameraRun:
             if matched_box is not None:
                 target.latest_box = matched_box
             result = {
+                "status": "find",
                 "source_type": target.source_type,
                 "identity": target.identity,
                 "found": matched_box is not None,
@@ -777,6 +952,15 @@ class CameraRunManager:
     def latest_output_path(self, run_id: str) -> Path | None:
         return self.get_run(run_id).latest_output_path()
 
+    def start_recording(self, run_id: str) -> dict:
+        return self.get_run(run_id).start_recording()
+
+    def stop_recording(self, run_id: str) -> dict:
+        return self.get_run(run_id).stop_recording()
+
+    def recording_video_path(self, run_id: str, recording_id: str) -> Path | None:
+        return self.get_run(run_id).recording_video_path(recording_id)
+
     def preview_jpegs(self, run_id: str):
         return self.get_run(run_id).iter_preview_jpegs()
 
@@ -786,16 +970,18 @@ class CameraRunManager:
     def select_tcp_target(
         self,
         run_id: str,
-        source_type: TcpTargetSource,
-        identity: str,
-        box: tuple[int, int, int, int],
+        source_type: TcpTargetSource | None = None,
+        identity: str | None = None,
+        box: tuple[int, int, int, int] | None = None,
         label: str | None = None,
+        status: TcpTargetStatus = "find",
     ) -> dict:
         return self.get_run(run_id).select_tcp_target(
             source_type=source_type,
             identity=identity,
             box=box,
             label=label,
+            status=status,
         )
 
     def _active_run_for_camera(self, camera_key: tuple[str, int]) -> CameraRun | None:

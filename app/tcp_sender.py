@@ -71,15 +71,19 @@ def build_face_status_tcp_payload(
     found: bool,
     box: tuple[int, int, int, int] | None,
 ) -> dict[str, Any]:
-    return build_vision_target_tcp_payload(identity=identity, found=found, box=box)
+    return build_vision_target_tcp_payload(identity=identity, found=found, box=box, status="find")
 
 
 def build_vision_target_tcp_payload(
     identity: str,
     found: bool,
     box: tuple[int, int, int, int] | None,
+    status: str = "find",
 ) -> dict[str, Any]:
+    if status in {"home", "far"}:
+        return {"status": status}
     return {
+        "status": "find",
         "identity": identity,
         "found": found,
         "box": _box_payload(box) if found else None,
@@ -88,6 +92,7 @@ def build_vision_target_tcp_payload(
 
 def build_test_face_tcp_payload(identity: str = "zhangzhan") -> dict[str, Any]:
     return {
+        "status": "find",
         "identity": identity,
         "found": True,
         "box": {

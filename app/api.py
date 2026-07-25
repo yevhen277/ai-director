@@ -4,7 +4,7 @@ import os
 import tempfile
 import asyncio
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
@@ -19,6 +19,7 @@ from app.camera_runs import (
     CameraRunConflictError,
     CameraRunManager,
     CameraRunNotFoundError,
+    CameraRunRecordingError,
     CameraRunValidationError,
 )
 from app.config import settings
@@ -35,6 +36,7 @@ from app.face_recognition import (
     registered_to_dict,
 )
 from app.labels import resolve_target_classes
+from app.robot_joint_receiver import JointUnit, RobotJointReceiver
 from app.vision import run_yolo_detection
 
 
@@ -64,6 +66,22 @@ face_service = FaceRecognitionService(
     model_name=settings.face_model,
 )
 camera_run_manager = CameraRunManager(detector=detector, face_service=face_service)
+robot_joint_receiver = RobotJointReceiver(
+    host=settings.robot_joint_tcp_host,
+    port=settings.robot_joint_tcp_port,
+    default_unit=cast(JointUnit, settings.robot_joint_tcp_default_unit),
+)
+
+
+@app.on_event("startup")
+async def start_robot_joint_receiver() -> None:
+    if settings.robot_joint_tcp_enabled:
+        await robot_joint_receiver.start()
+
+
+@app.on_event("shutdown")
+async def stop_robot_joint_receiver() -> None:
+    await robot_joint_receiver.stop()
 
 
 class CameraAimRequest(BaseModel):
@@ -144,9 +162,10 @@ class CameraRunStartRequest(BaseModel):
 
 
 class CameraRunTcpTargetRequest(BaseModel):
-    source_type: Literal["object", "face"]
-    identity: str
-    box: list[float]
+    status: Literal["home", "far", "find"] = "find"
+    source_type: Literal["object", "face"] | None = None
+    identity: str | None = None
+    box: list[float] | None = None
     label: str | None = None
 
 
@@ -307,6 +326,40 @@ def camera_run_latest_image(run_id: str):
     return FileResponse(path=str(output_path), media_type="image/jpeg", filename=output_path.name)
 
 
+@app.post("/camera/runs/{run_id}/recording/start")
+def start_camera_run_recording(run_id: str) -> dict:
+    try:
+        return camera_run_manager.start_recording(run_id)
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+    except CameraRunRecordingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.post("/camera/runs/{run_id}/recording/stop")
+def stop_camera_run_recording(run_id: str) -> dict:
+    try:
+        recording = camera_run_manager.stop_recording(run_id)
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+    except CameraRunRecordingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if recording and recording.get("status") == "ready":
+        recording["download_url"] = f"/camera/runs/{run_id}/recordings/{recording['id']}.mp4"
+    return recording
+
+
+@app.get("/camera/runs/{run_id}/recordings/{recording_id}.mp4")
+def download_camera_run_recording(run_id: str, recording_id: str):
+    try:
+        video_path = camera_run_manager.recording_video_path(run_id, recording_id)
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+    if video_path is None or not video_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Recording is not available: {recording_id}")
+    return FileResponse(path=str(video_path), media_type="video/mp4", filename=video_path.name)
+
+
 @app.get("/camera/runs/{run_id}/preview.mjpg")
 def camera_run_preview(run_id: str):
     try:
@@ -370,15 +423,19 @@ async def camera_run_boxes(websocket: WebSocket, run_id: str):
 
 @app.post("/camera/runs/{run_id}/tcp-target")
 def select_camera_run_tcp_target(run_id: str, request: CameraRunTcpTargetRequest) -> dict:
-    identity = request.identity.strip()
-    if not identity:
-        raise HTTPException(status_code=400, detail="identity cannot be empty")
-    if len(request.box) != 4:
-        raise HTTPException(status_code=400, detail="box must contain four coordinates")
-    try:
-        box = tuple(int(round(float(value))) for value in request.box)
-    except (TypeError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail="box coordinates must be numeric") from exc
+    identity = (request.identity or "").strip()
+    box = None
+    if request.status == "find":
+        if not identity:
+            raise HTTPException(status_code=400, detail="identity cannot be empty")
+        if request.source_type is None:
+            raise HTTPException(status_code=400, detail="source_type is required for find status")
+        if request.box is None or len(request.box) != 4:
+            raise HTTPException(status_code=400, detail="box must contain four coordinates")
+        try:
+            box = tuple(int(round(float(value))) for value in request.box)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="box coordinates must be numeric") from exc
     try:
         return camera_run_manager.select_tcp_target(
             run_id=run_id,
@@ -386,11 +443,38 @@ def select_camera_run_tcp_target(run_id: str, request: CameraRunTcpTargetRequest
             identity=identity,
             box=box,
             label=request.label,
+            status=request.status,
         )
     except CameraRunNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
     except CameraRunValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/robot/joints/status")
+def robot_joints_status() -> dict:
+    return robot_joint_receiver.status()
+
+
+@app.websocket("/robot/joints.ws")
+async def robot_joints_ws(websocket: WebSocket):
+    await websocket.accept()
+    queue = robot_joint_receiver.subscribe()
+    try:
+        await websocket.send_json({"type": "robot_joints", "status": "connected", "data": robot_joint_receiver.status()})
+        while True:
+            payload = await queue.get()
+            await websocket.send_json(payload)
+    except asyncio.CancelledError:
+        return
+    except WebSocketDisconnect:
+        return
+    finally:
+        robot_joint_receiver.unsubscribe(queue)
+        try:
+            await websocket.close()
+        except RuntimeError:
+            pass
 
 
 @app.delete("/camera/runs/{run_id}")

@@ -45,6 +45,11 @@ def _optional_bool(name: str) -> bool | None:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def _bool(name: str, default: bool) -> bool:
+    value = _optional_bool(name)
+    return default if value is None else value
+
+
 def _positive_int(name: str, default: int) -> int:
     value = int(os.getenv(name, str(default)))
     if value < 1:
@@ -73,6 +78,13 @@ def _director_plan_mode(name: str, default: str) -> str:
     return value
 
 
+def _joint_unit(name: str, default: str) -> str:
+    value = os.getenv(name, default).strip().lower()
+    if value not in {"deg", "rad"}:
+        raise ValueError(f"{name} must be 'deg' or 'rad'")
+    return value
+
+
 load_env_file()
 
 
@@ -96,6 +108,10 @@ class Settings:
     tcp_face_timeout_seconds: float = _positive_float("TCP_FACE_TIMEOUT_SECONDS", 0.2)
     tcp_face_send_fps: int = _positive_int("TCP_FACE_SEND_FPS", 10)
     tcp_face_track_ttl_seconds: float = _positive_float("TCP_FACE_TRACK_TTL_SECONDS", 1.0)
+    robot_joint_tcp_enabled: bool = _bool("ROBOT_JOINT_TCP_ENABLED", True)
+    robot_joint_tcp_host: str = os.getenv("ROBOT_JOINT_TCP_HOST", "0.0.0.0")
+    robot_joint_tcp_port: int = int(os.getenv("ROBOT_JOINT_TCP_PORT", "9100"))
+    robot_joint_tcp_default_unit: str = _joint_unit("ROBOT_JOINT_TCP_DEFAULT_UNIT", "deg")
     llm_base_url: str = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
     llm_api_key: str | None = os.getenv("LLM_API_KEY")
     llm_model: str | None = os.getenv("LLM_MODEL")
