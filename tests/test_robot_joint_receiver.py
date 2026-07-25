@@ -25,6 +25,12 @@ class RobotJointReceiverParsingTest(unittest.TestCase):
         self.assertEqual(frame.unit, "deg")
         self.assertAlmostEqual(frame.pos_deg[2], -60, places=4)
 
+    def test_parse_a1z_joint_state_defaults_to_rad(self) -> None:
+        frame = parse_joint_line('{"type":"a1z_joint_state","joints":[0.5922,1.4628,-0.6182,-0.6926,-0.561,-0.0082]}')
+        self.assertEqual(frame.unit, "rad")
+        self.assertAlmostEqual(frame.pos_rad[1], 1.4628, places=4)
+        self.assertAlmostEqual(frame.pos_deg[1], math.degrees(1.4628), places=4)
+
     def test_parse_csv_default_deg(self) -> None:
         frame = parse_joint_line("0,60,-60,0,0,0")
         self.assertEqual(frame.unit, "deg")

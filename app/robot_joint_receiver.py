@@ -22,10 +22,47 @@ A1Z_LIMITS_RAD: tuple[tuple[float, float], ...] = (
 )
 
 ROBOT_JOINT_LOG_PATH = Path("Log") / "robot_joints_tcp.log"
+ROBOT_JOINT_LOG_MAX_LINES = 1000
+
+
+class LineLimitedFileHandler(logging.FileHandler):
+    def __init__(self, filename: Path, max_lines: int, **kwargs: Any):
+        super().__init__(filename, **kwargs)
+        self.max_lines = max_lines
+        self._emit_count = 0
+
+    def emit(self, record: logging.LogRecord) -> None:
+        super().emit(record)
+        self._emit_count += 1
+        if self._emit_count >= 25:
+            self._emit_count = 0
+            self._trim_lines()
+
+    def close(self) -> None:
+        try:
+            self._trim_lines()
+        finally:
+            super().close()
+
+    def _trim_lines(self) -> None:
+        self.flush()
+        path = Path(self.baseFilename)
+        try:
+            lines = path.read_text(encoding=self.encoding or "utf-8").splitlines(keepends=True)
+        except OSError:
+            return
+        if len(lines) <= self.max_lines:
+            return
+        try:
+            path.write_text("".join(lines[-self.max_lines:]), encoding=self.encoding or "utf-8")
+        except OSError:
+            return
+
+
 robot_joint_logger = logging.getLogger("director.robot_joints_tcp")
 if not robot_joint_logger.handlers:
     ROBOT_JOINT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    handler = logging.FileHandler(ROBOT_JOINT_LOG_PATH, encoding="utf-8")
+    handler = LineLimitedFileHandler(ROBOT_JOINT_LOG_PATH, max_lines=ROBOT_JOINT_LOG_MAX_LINES, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     robot_joint_logger.addHandler(handler)
     robot_joint_logger.setLevel(logging.INFO)
@@ -84,7 +121,7 @@ def parse_joint_line(line: str, default_unit: JointUnit = "deg") -> JointFrame:
             values = payload["pos_deg"]
         elif "joints" in payload:
             values = payload["joints"]
-            unit = _parse_unit(payload.get("unit", default_unit), default_unit)
+            unit = _parse_unit(payload.get("unit", _infer_joint_unit(payload, default_unit)), default_unit)
         else:
             raise ValueError("JSON joint payload must contain pos_deg, pos_rad, or joints")
     else:
@@ -196,6 +233,13 @@ def _parse_unit(value: Any, default_unit: JointUnit) -> JointUnit:
     if unit in {"rad", "radian", "radians"}:
         return "rad"
     raise ValueError("unit must be deg or rad")
+
+
+def _infer_joint_unit(payload: dict[str, Any], default_unit: JointUnit) -> JointUnit:
+    payload_type = str(payload.get("type") or "").strip().lower()
+    if payload_type == "a1z_joint_state":
+        return "rad"
+    return default_unit
 
 
 def _parse_six_numbers(values: Any) -> tuple[float, float, float, float, float, float]:
