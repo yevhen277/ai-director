@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import math
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
 
@@ -18,6 +20,16 @@ A1Z_LIMITS_RAD: tuple[tuple[float, float], ...] = (
     (-1.484, 1.484),
     (-2.007, 2.007),
 )
+
+ROBOT_JOINT_LOG_PATH = Path("Log") / "robot_joints_tcp.log"
+robot_joint_logger = logging.getLogger("director.robot_joints_tcp")
+if not robot_joint_logger.handlers:
+    ROBOT_JOINT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler(ROBOT_JOINT_LOG_PATH, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    robot_joint_logger.addHandler(handler)
+    robot_joint_logger.setLevel(logging.INFO)
+    robot_joint_logger.propagate = False
 
 
 @dataclass(frozen=True)
@@ -122,11 +134,21 @@ class RobotJointStateHub:
         except ValueError as exc:
             self.last_error = str(exc)
             self.last_source = source
+            robot_joint_logger.warning("invalid client=%s source=%s error=%s raw=%r", client, source, exc, line)
             return None
 
         self.last_frame = frame
         self.last_error = None
         self.last_source = source
+        robot_joint_logger.info(
+            "received client=%s source=%s unit=%s pos_deg=%s pos_rad=%s raw=%r",
+            client,
+            source,
+            frame.unit,
+            [round(value, 4) for value in frame.pos_deg],
+            [round(value, 6) for value in frame.pos_rad],
+            frame.raw,
+        )
         self._publish(frame.to_payload())
         return frame
 

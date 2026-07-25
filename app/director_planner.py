@@ -66,7 +66,11 @@ def generate_director_plan(planner_input: PlannerInput) -> dict[str, Any]:
         raise DirectorPlannerError("LLM_MODEL is not configured")
 
     raw_plan = _call_chat_completions(planner_input)
-    return _validate_plan(raw_plan, max_duration_seconds=planner_input.max_duration_seconds)
+    return _validate_plan(
+        raw_plan,
+        max_duration_seconds=planner_input.max_duration_seconds,
+        vision_context=planner_input.vision_context,
+    )
 
 
 def _call_chat_completions(planner_input: PlannerInput) -> dict[str, Any]:
@@ -162,11 +166,14 @@ Rules:
 - Do not mention or output any other robot state, pose, location, shot type, camera move, or posture name such as close, low, top, arc, orbit, surround, circle, sweep, truck, insert, overhead, dolly-in pose, or macro pose.
 - Do not create cinematic movement shots such as ARC ORBIT, TOP SHOT, LOW ANGLE, TRUCK SWEEP, DOLLY IN, DOLLY OUT, push-in, pull-out, orbit, circle-around, surround, pan, tilt, or sweep. The arm only supports: find one object/face, move home, move far.
 - tcp_status must be exactly one of "home", "far", or "find". Use "find" whenever the shot searches for, locates, finds, or tracks an object/face, even if its tech is FAR or its numeric pose is near far. Use "far" only when the shot explicitly moves the arm from home to far or commands a far position without searching. Otherwise use "home".
+- If tcp_status is "home" or "far", target must be null and target_intent must not name a specific object or face.
 - If a shot both has a target and says it moves from home to far, tcp_status must be "far", not "find".
 - If a shot says "寻找/搜索/定位/find/search/locate chair" or similar, tcp_status must be "find" and target must be the searched object/face, such as chair.
 - Each shot may target at most one object or face. The robot arm can search for only one item at a time.
 - For every shot, set target to exactly one detected object/face or null. Never include an array of targets.
-- If target is not null, source_type must be "object" or "face", identity must match a real detected object label or face identity from vision_context, and box must copy that detection's box coordinates.
+- If target is not null, source_type must be "object" or "face", identity must exactly match an item in available_targets from the user's JSON. Do not translate, rename, pluralize, summarize, or invent target identities.
+- For object targets, target.identity must exactly equal one of available_targets.objects[].identity values, and box must copy that same target's box coordinates.
+- For face targets, target.identity must exactly equal one of available_targets.faces[].identity values, and box must copy that same target's box coordinates.
 - If the requested subject is not clearly detected, set target to null and make the shot a cautious search/establish shot.
 - target_intent and arm_action must be human-readable and match the user's language. arm_action must mention the shot time range and describe only home/far/find actions. Do not describe circling, orbiting, surrounding, sweeping, pushing in, pulling out, high angle, low angle, or any unsupported movement.
 - First keyframe of the first shot should usually be "home".
@@ -188,6 +195,8 @@ def _user_prompt(planner_input: PlannerInput) -> str:
             "output_language": output_language,
             "language_rule": f"Return title, summary, shot name, and desc in {output_language}, matching the user's prompt language.",
             "vision_context": planner_input.vision_context or {},
+            "available_targets": _available_targets(planner_input.vision_context),
+            "target_identity_rule": "When shot.target is not null, shot.target.identity must exactly match one available_targets item identity and shot.target.box must copy that item's box. Otherwise use target:null.",
             "image_attached": bool(planner_input.image_path),
         },
         ensure_ascii=False,
@@ -203,6 +212,54 @@ def _detect_user_language(text: str) -> str:
     if re.search(r"[\uac00-\ud7af]", text or ""):
         return "Korean"
     return "English"
+
+
+def _available_targets(vision_context: dict[str, Any] | None) -> dict[str, list[dict[str, Any]]]:
+    context = vision_context if isinstance(vision_context, dict) else {}
+    object_items = context.get("detections") or context.get("results") or context.get("objects") or []
+    face_recognition = context.get("face_recognition") if isinstance(context.get("face_recognition"), dict) else {}
+    face_items = context.get("faces") or face_recognition.get("matches") or []
+    return {
+        "objects": [_available_object_target(item) for item in object_items if isinstance(item, dict)],
+        "faces": [_available_face_target(item) for item in face_items if isinstance(item, dict)],
+    }
+
+
+def _available_object_target(item: dict[str, Any]) -> dict[str, Any]:
+    identity = str(item.get("label") or item.get("identity") or item.get("object_name") or "").strip()
+    box = _normalize_target_box(item.get("box") or _box_from_robot_object(item))
+    target: dict[str, Any] = {
+        "source_type": "object",
+        "identity": identity,
+        "label": identity,
+        "box": box,
+    }
+    confidence = _finite_float(item.get("confidence"))
+    if confidence is not None:
+        target["confidence"] = max(0.0, min(1.0, confidence))
+    return target
+
+
+def _available_face_target(item: dict[str, Any]) -> dict[str, Any]:
+    identity = str(item.get("identity") or item.get("label") or "unknown").strip()
+    box = _normalize_target_box(item.get("box"))
+    target: dict[str, Any] = {
+        "source_type": "face",
+        "identity": identity,
+        "box": box,
+    }
+    confidence = _finite_float(item.get("similarity") or item.get("confidence"))
+    if confidence is not None:
+        target["confidence"] = max(0.0, min(1.0, confidence))
+    return target
+
+
+def _box_from_robot_object(item: dict[str, Any]) -> list[Any] | None:
+    top_left = item.get("top_left")
+    bottom_right = item.get("bottom_right")
+    if not isinstance(top_left, dict) or not isinstance(bottom_right, dict):
+        return None
+    return [top_left.get("x"), top_left.get("y"), bottom_right.get("x"), bottom_right.get("y")]
 
 
 def _image_data_url(image_path: str | Path) -> str:
@@ -229,11 +286,16 @@ def _parse_json_object(content: str) -> dict[str, Any]:
     return parsed
 
 
-def _validate_plan(plan: dict[str, Any], max_duration_seconds: float) -> dict[str, Any]:
+def _validate_plan(
+    plan: dict[str, Any],
+    max_duration_seconds: float,
+    vision_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     shots = plan.get("shots")
     if not isinstance(shots, list) or not 1 <= len(shots) <= 8:
         raise DirectorPlannerError("Plan must contain 1 to 8 shots")
 
+    allowed_targets = _target_lookup(_available_targets(vision_context))
     validated_shots: list[dict[str, Any]] = []
     last_time = 0.0
     for shot_index, shot in enumerate(shots):
@@ -285,14 +347,17 @@ def _validate_plan(plan: dict[str, Any], max_duration_seconds: float) -> dict[st
         if t1 <= t0:
             raise DirectorPlannerError("Shot duration must be positive")
         last_time = t1
+        tcp_status = _normalize_tcp_status(shot, validated_keyframes)
+        target = _normalize_shot_target(shot.get("target")) if tcp_status == "find" else None
+        target = _target_from_lookup(target, allowed_targets)
         validated_shots.append(
             {
                 "name": str(shot.get("name") or f"Shot {shot_index + 1}")[:80],
-                "tech": _normalize_tech(shot, validated_keyframes),
+                "tech": _tech_for_tcp_status(shot, tcp_status),
                 "desc": str(shot.get("desc") or "")[:240],
-                "target": _normalize_shot_target(shot.get("target")),
+                "target": target,
                 "target_intent": str(shot.get("target_intent") or "")[:180],
-                "tcp_status": _normalize_tcp_status(shot, validated_keyframes),
+                "tcp_status": tcp_status,
                 "arm_action": str(shot.get("arm_action") or "")[:260],
                 "keyframes": validated_keyframes,
                 "t0": round(t0, 3),
@@ -365,7 +430,10 @@ def _pose_for_tech(tech: str, shot_index: int) -> list[float]:
 
 
 def _normalize_tech(shot: dict[str, Any], keyframes: list[list[Any]]) -> str:
-    status = _normalize_tcp_status(shot, keyframes)
+    return _tech_for_tcp_status(shot, _normalize_tcp_status(shot, keyframes))
+
+
+def _tech_for_tcp_status(shot: dict[str, Any], status: str) -> str:
     if status == "far":
         return "FAR"
     if status == "find":
@@ -422,6 +490,29 @@ def _last_pose_is_far(keyframes: list[list[Any]]) -> bool:
 
 def _is_keyframe_like(frame: Any) -> bool:
     return isinstance(frame, list | tuple) and len(frame) == 2
+
+
+def _target_lookup(available_targets: dict[str, list[dict[str, Any]]]) -> dict[tuple[str, str], dict[str, Any]]:
+    lookup: dict[tuple[str, str], dict[str, Any]] = {}
+    for source_type, group in (("object", "objects"), ("face", "faces")):
+        for target in available_targets.get(group, []):
+            normalized = _normalize_shot_target(target)
+            if normalized is None:
+                continue
+            lookup[(source_type, normalized["identity"])] = normalized
+    return lookup
+
+
+def _target_from_lookup(
+    target: dict[str, Any] | None,
+    allowed_targets: dict[tuple[str, str], dict[str, Any]],
+) -> dict[str, Any] | None:
+    if target is None:
+        return None
+    matched = allowed_targets.get((target["source_type"], target["identity"]))
+    if matched is None:
+        return None
+    return matched.copy()
 
 
 def _normalize_shot_target(target: Any) -> dict[str, Any] | None:

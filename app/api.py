@@ -3,8 +3,10 @@ from __future__ import annotations
 import os
 import tempfile
 import asyncio
+import json
+import time
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
@@ -41,6 +43,8 @@ from app.vision import run_yolo_detection
 
 
 OUTPUT_DIR = Path("images") / "output"
+LOG_DIR = Path("Log")
+DIRECTOR_AGENT_DEBUG_LOG = LOG_DIR / "director_agent_debug.log"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 DIRECTORX_DIR = Path(__file__).resolve().parent.parent / "robot_dog"
 DIRECTORX_HTML = DIRECTORX_DIR / "directorx.html"
@@ -157,6 +161,18 @@ class DirectorPlanRequest(BaseModel):
     max_duration_seconds: float = 28.0
 
 
+class DirectorAgentDebugLogRequest(BaseModel):
+    event: str
+    user_prompt: str | None = None
+    plan: dict[str, Any] | None = None
+    shots: list[dict[str, Any]] | None = None
+    tcp_payloads: list[dict[str, Any]] | None = None
+    shot_index: int | None = None
+    shot: dict[str, Any] | None = None
+    tcp_payload: dict[str, Any] | None = None
+    detail: dict[str, Any] | None = None
+
+
 @app.get("/")
 def index():
     return FileResponse(STATIC_DIR / "index.html")
@@ -226,6 +242,17 @@ def director_plan(request: DirectorPlanRequest) -> dict:
         )
     except DirectorPlannerError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/director/debug-log")
+def director_agent_debug_log(request: DirectorAgentDebugLogRequest) -> dict:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    entry = request.model_dump(exclude_none=True)
+    entry["ts"] = time.time()
+    entry["iso_time"] = time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(entry["ts"]))
+    with DIRECTOR_AGENT_DEBUG_LOG.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return {"ok": True, "path": str(DIRECTOR_AGENT_DEBUG_LOG)}
 
 
 @app.get("/camera/orbbec/devices")
