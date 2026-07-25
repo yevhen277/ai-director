@@ -1,0 +1,4 @@
+[submodule "dimos"]
+	path = dimos
+	url = https://github.com/yevhen277/dimos.git
+	branch = feat/galaxea-a1z-adapter
