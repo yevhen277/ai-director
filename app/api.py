@@ -19,6 +19,7 @@ from app.camera import capture_opencv_frame, capture_orbbec_color_frame, list_or
 from app.camera_runs import (
     CameraRunConfig,
     CameraRunConflictError,
+    CameraRunFaceRegistrationError,
     CameraRunManager,
     CameraRunNotFoundError,
     CameraRunRecordingError,
@@ -97,6 +98,11 @@ class FaceRegisterRequest(BaseModel):
     face_id: str
     threshold: float = settings.face_threshold
     source_image: str | None = None
+
+
+class CameraRunFaceRegisterBestRequest(BaseModel):
+    identity: str
+    threshold: float | None = None
 
 
 class CameraFaceRecognizeRequest(BaseModel):
@@ -333,6 +339,24 @@ def camera_run_latest_image(run_id: str):
     if output_path is None or not output_path.is_file():
         raise HTTPException(status_code=404, detail=f"No output image is available for camera run: {run_id}")
     return FileResponse(path=str(output_path), media_type="image/jpeg", filename=output_path.name)
+
+
+@app.post("/camera/runs/{run_id}/faces/register-best")
+def register_best_face_from_camera_run(run_id: str, request: CameraRunFaceRegisterBestRequest) -> dict:
+    try:
+        return camera_run_manager.register_best_face(
+            run_id=run_id,
+            identity=request.identity,
+            threshold=request.threshold,
+        )
+    except CameraRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown camera run: {run_id}") from exc
+    except CameraRunValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CameraRunFaceRegistrationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.post("/camera/runs/{run_id}/recording/start")

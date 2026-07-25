@@ -15,7 +15,13 @@ import cv2
 from app.camera import OpenCVCamera, OrbbecColorCamera
 from app.config import settings
 from app.detector import YoloDetector, draw_detections
-from app.face_recognition import FaceRecognitionService, draw_face_matches, recognition_result_to_dict
+from app.face_recognition import (
+    FaceRecognitionService,
+    candidate_to_dict,
+    draw_face_matches,
+    recognition_result_to_dict,
+    registered_to_dict,
+)
 from app.robot_joint_receiver import RobotJointStateHub
 from app.tcp_sender import (
     TcpJsonLineClient,
@@ -88,6 +94,10 @@ class CameraRunValidationError(ValueError):
 
 
 class CameraRunRecordingError(RuntimeError):
+    pass
+
+
+class CameraRunFaceRegistrationError(RuntimeError):
     pass
 
 
@@ -370,6 +380,35 @@ class CameraRun:
                 return None
             output_path = self.latest_sample.get("output_path")
             return Path(output_path) if output_path else None
+
+    def register_best_face(self, identity: str, threshold: float | None = None) -> dict:
+        identity = identity.strip()
+        if not identity:
+            raise CameraRunValidationError("identity cannot be empty")
+
+        with self._lock:
+            frame_snapshot = self._latest_frame.copy() if self._latest_frame is not None else None
+            sample = self.latest_sample
+            source_image = sample.get("input_path") if isinstance(sample, dict) else None
+
+        if frame_snapshot is None:
+            raise CameraRunFaceRegistrationError("No camera frame is available for face registration")
+
+        candidates = self.face_service.detect_faces(frame_snapshot)
+        if not candidates:
+            raise CameraRunFaceRegistrationError("No face is available in the current frame")
+
+        best_candidate = max(candidates, key=lambda candidate: candidate.confidence)
+        registered = self.face_service.register_candidate(
+            identity=identity,
+            face_id=best_candidate.face_id,
+            threshold=threshold if threshold is not None else settings.face_threshold,
+            source_image=source_image or f"camera_run:{self.run_id}:latest_frame",
+        )
+        return {
+            "registered": registered_to_dict(registered),
+            "candidate": candidate_to_dict(best_candidate),
+        }
 
     def _recording_to_dict_locked(self) -> dict | None:
         if not self._recording:
@@ -968,6 +1007,9 @@ class CameraRunManager:
 
     def latest_output_path(self, run_id: str) -> Path | None:
         return self.get_run(run_id).latest_output_path()
+
+    def register_best_face(self, run_id: str, identity: str, threshold: float | None = None) -> dict:
+        return self.get_run(run_id).register_best_face(identity=identity, threshold=threshold)
 
     def start_recording(self, run_id: str) -> dict:
         return self.get_run(run_id).start_recording()

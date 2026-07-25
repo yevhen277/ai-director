@@ -217,6 +217,54 @@
       overflow-wrap: anywhere;
     }
 
+    .face-register {
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfa;
+    }
+
+    .face-register-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .face-register input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .face-register input:disabled {
+      background: #eef2ec;
+      color: var(--muted);
+    }
+
+    .face-register button {
+      background: var(--accent);
+      white-space: nowrap;
+    }
+
+    .face-register button:hover:not(:disabled) {
+      background: var(--accent-strong);
+    }
+
+    .register-status {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
     .message {
       padding: 16px 14px;
       color: var(--muted);
@@ -295,6 +343,13 @@
             <h2>识别人脸</h2>
             <span id="faceCount" class="count">0</span>
           </div>
+          <div class="face-register">
+            <div class="face-register-row">
+              <input id="faceNameInput" type="text" placeholder="输入名字" autocomplete="off" disabled>
+              <button id="registerFaceButton" type="button" disabled>注册最高置信度人脸</button>
+            </div>
+            <div id="registerFaceStatus" class="register-status">启动摄像头后可注册固定人脸</div>
+          </div>
           <div id="faceList" class="objects">
             <div class="message">等待人脸识别结果</div>
           </div>
@@ -324,6 +379,9 @@
     const objectList = document.getElementById("objectList");
     const faceCount = document.getElementById("faceCount");
     const faceList = document.getElementById("faceList");
+    const faceNameInput = document.getElementById("faceNameInput");
+    const registerFaceButton = document.getElementById("registerFaceButton");
+    const registerFaceStatus = document.getElementById("registerFaceStatus");
 
     function setStatus(text, isError = false) {
       statusBadge.textContent = text;
@@ -345,6 +403,16 @@
 
     function showFaceMessage(text, isError = false) {
       showListMessage(faceCount, faceList, text, isError);
+    }
+
+    function setRegisterStatus(text, isError = false) {
+      registerFaceStatus.textContent = text;
+      registerFaceStatus.classList.toggle("error", isError);
+    }
+
+    function updateRegisterControls(enabled) {
+      faceNameInput.disabled = !enabled;
+      registerFaceButton.disabled = !enabled;
     }
 
     function normalizeDetection(item) {
@@ -448,6 +516,8 @@
       latestImage.removeAttribute("src");
       latestImage.style.display = "none";
       photoEmpty.style.display = "block";
+      updateRegisterControls(false);
+      setRegisterStatus("启动摄像头后可注册固定人脸");
       setStatus("启动中");
       showObjectMessage("等待检测结果");
       showFaceMessage("等待人脸识别结果");
@@ -475,6 +545,8 @@
         state.runId = run.run_id;
         state.lastFrameCount = 0;
         stopButton.disabled = false;
+        updateRegisterControls(true);
+        setRegisterStatus("输入名字后注册当前最高置信度人脸");
         runIdText.textContent = run.run_id ? `run_id：${run.run_id}` : "";
         renderStatus(run);
         schedulePoll(0);
@@ -482,6 +554,7 @@
         state.runId = null;
         startButton.disabled = false;
         stopButton.disabled = true;
+        updateRegisterControls(false);
         setStatus("错误", true);
         showObjectMessage(error.message || String(error), true);
         showFaceMessage(error.message || String(error), true);
@@ -508,6 +581,8 @@
         showObjectMessage(run.error, true);
         showFaceMessage(run.error, true);
       }
+
+      updateRegisterControls(Boolean(state.runId) && !["stopped", "error"].includes(status));
     }
 
     async function pollRun() {
@@ -527,6 +602,7 @@
         if (["stopped", "error"].includes(run.status)) {
           startButton.disabled = false;
           stopButton.disabled = true;
+          updateRegisterControls(false);
           return;
         }
       } catch (error) {
@@ -535,6 +611,7 @@
         showFaceMessage(error.message || String(error), true);
         startButton.disabled = false;
         stopButton.disabled = true;
+        updateRegisterControls(false);
       }
 
       schedulePoll(POLL_MS);
@@ -553,6 +630,7 @@
       state.stopped = true;
       clearTimeout(state.pollTimer);
       stopButton.disabled = true;
+      updateRegisterControls(false);
       setStatus("停止中");
 
       try {
@@ -566,11 +644,13 @@
         const run = await response.json();
         renderStatus(run);
         startButton.disabled = false;
+        updateRegisterControls(false);
       } catch (error) {
         setStatus("错误", true);
         showObjectMessage(error.message || String(error), true);
         showFaceMessage(error.message || String(error), true);
         startButton.disabled = false;
+        updateRegisterControls(false);
       }
     }
 
@@ -583,8 +663,56 @@
       }
     }
 
+    async function registerBestFace() {
+      const identity = faceNameInput.value.trim();
+      if (!identity) {
+        setRegisterStatus("请输入名字", true);
+        faceNameInput.focus();
+        return;
+      }
+      if (!state.runId) {
+        setRegisterStatus("请先启动摄像头", true);
+        return;
+      }
+
+      registerFaceButton.disabled = true;
+      faceNameInput.disabled = true;
+      setRegisterStatus("正在注册...");
+
+      try {
+        const response = await fetch(`/camera/runs/${encodeURIComponent(state.runId)}/faces/register-best`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identity })
+        });
+        if (!response.ok) {
+          const detail = await readError(response);
+          throw new Error(detail || `注册失败：HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        const registered = result.registered || {};
+        const candidate = result.candidate || {};
+        const confidence = Number(candidate.confidence);
+        const confidenceText = Number.isFinite(confidence) ? `${Math.round(confidence * 100)}%` : "未知置信度";
+        const boxText = Array.isArray(candidate.box) ? ` [${candidate.box.join(", ")}]` : "";
+        setRegisterStatus(`已注册：${registered.identity || identity} · ${confidenceText}${boxText}`);
+        faceNameInput.value = "";
+      } catch (error) {
+        setRegisterStatus(error.message || String(error), true);
+      } finally {
+        updateRegisterControls(Boolean(state.runId) && !state.stopped);
+      }
+    }
+
     startButton.addEventListener("click", startRun);
     stopButton.addEventListener("click", stopRun);
+    registerFaceButton.addEventListener("click", registerBestFace);
+    faceNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        registerBestFace();
+      }
+    });
   </script>
 </body>
 </html>
